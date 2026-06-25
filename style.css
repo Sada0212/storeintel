@@ -1220,3 +1220,31 @@ html, body {
 }
 .split-val { font-size: 20px; font-weight: 800; color: var(--amber); }
 .split-lbl { font-size: 10px; color: var(--grey); margin-top: 4px; line-height: 1.4; }
+
+/* ── BRANDING FOOTER ──────────────────────────────────────── */
+.brand-footer {
+  text-align: center;
+  font-size: 10px;
+  color: var(--grey);
+  padding: 8px 16px 12px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--navy-light);
+  background: var(--navy);
+}
+.brand-footer strong { color: var(--amber); }
+
+/* ── PRINT BRANDING FOOTER ────────────────────────────────── */
+@media print {
+  .brand-footer {
+    display: block !important;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #fff !important;
+    color: #888 !important;
+    border-top: 1px solid #ddd !important;
+    font-size: 8pt;
+    padding: 4pt 12pt;
+    text-align: center;
+  }
+  .brand-footer strong { color: #b8860b !important; }
+}

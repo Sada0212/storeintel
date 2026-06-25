@@ -516,15 +516,21 @@ function initTabs() {
 }
 
 function initActionDelegation() {
-  // Called after render() sets tab-action-content innerHTML
-  const el = document.getElementById('tab-action-content');
-  if (!el) return;
-  // Remove old listener to avoid duplicates on second report
-  el.replaceWith(el.cloneNode(true));
-  document.getElementById('tab-action-content').addEventListener('click', e=>{
+  // Attach to the stable parent panel, not the content div that gets replaced
+  const panel = document.getElementById('tab-action');
+  if (!panel) return;
+  // Use a flag to avoid duplicate listeners across multiple report runs
+  if (panel._actionListenerAttached) return;
+  panel._actionListenerAttached = true;
+  panel.addEventListener('click', function(e) {
     const card = e.target.closest('[data-action-idx]');
-    if (card) ActionCenter.open(parseInt(card.dataset.actionIdx));
+    if (!card) return;
+    const idx = parseInt(card.dataset.actionIdx);
+    console.log('[ActionCenter] card tapped, idx:', idx,
+                'customers available:', (window._rfmCustomers||[]).length);
+    ActionCenter.open(idx);
   });
+  console.log('[ActionCenter] delegation attached to #tab-action');
 }
 
 // ── MAIN RENDER ─────────────────────────────────────────────────────
