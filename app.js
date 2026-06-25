@@ -88,7 +88,9 @@ function initSetupScreen() {
   function handleMappingFile(file) {
     if (!file.name.match(/\.(xlsx|xls)$/i)) { showToast('Please pick the mapping .xlsx file'); return; }
     state.mappingFileName = file.name;
-    mappingNameEl.textContent = file.name;
+    mappingNameEl.textContent = file.name.length > 35
+      ? file.name.substring(0, 32) + '...'
+      : file.name;
     mappingNameEl.classList.remove('hidden');
     readFileAsArrayBuffer(file).then(buf => {
       state.mappingFileBuffer = buf;
@@ -246,7 +248,9 @@ function initHomeScreen() {
     const ext = file.name.split('.').pop().toLowerCase();
     if (!['xlsx','xls','csv'].includes(ext)) { showToast('Pick a .xlsx or .csv file'); return; }
     state.posFileName = file.name;
-    posNameEl.textContent = file.name;
+    posNameEl.textContent = file.name.length > 35
+      ? file.name.substring(0, 32) + '...'
+      : file.name;
     posNameEl.classList.remove('hidden');
     readFileAsArrayBuffer(file).then(buf => {
       state.posFileBuffer = buf;
@@ -346,7 +350,7 @@ async function startGenerate() {
 
     // Run full analysis
     setStep('Running analysis…', 72);
-    const analysisResults = Analysis.runAll(result.rows, Ingestion.JEWELLERY_CONFIG);
+    const analysisResults = Analysis.runAll(result.rows, Ingestion.JEWELLERY_CONFIG, saved.mappingData.mapping);
 
     setStep('Building report…', 88);
     await delay(150);

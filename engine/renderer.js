@@ -77,7 +77,23 @@ function renderSummary(R) {
     if(gap>40) ins+=insight(`📊 ${gap}% revenue gap between top and bottom RSO`,'warn');
   }
 
-  document.getElementById('tab-insights').innerHTML = (ins?sec('Key Insights',ins):'') + scHtml;
+  // E3 Store Metrics
+  let e3 = '';
+  const sm = (ex.store_metrics||[]);
+  if (sm.length) {
+    e3 = sec('E3 — Store Metrics',
+      sm.map(m => {
+        if (m.type === 'qty')
+          return rrow(m.label, num(m.total), null, `<span>Avg ${m.avg} per txn</span>`);
+        if (m.type === 'rate')
+          return rrow(m.label, fI(m.total), null, `<span>Average this period</span>`);
+        return rrow(m.label, fI(m.total), null,
+          `<span>${pct(m.pct)} of revenue</span><span>Avg ${fI(m.avg)} per txn</span>`);
+      }).join('')
+    );
+  }
+
+  document.getElementById('tab-insights').innerHTML = (ins?sec('Key Insights',ins):'') + scHtml + e3;
 }
 
 // ── TAB 2: CATEGORY ─────────────────────────────────────────────────
@@ -99,7 +115,8 @@ function renderCategory(R) {
   if (gold && gold.available) {
     let goldRows = '';
     if(gold.total_gross_wt) goldRows += rrow('Total Gross Weight', gold.total_gross_wt+'g', null, `<span>Avg ${gold.avg_gross_wt}g per txn</span>`);
-    if(gold.total_making)   goldRows += rrow('Making Charges', fI(gold.total_making), null, `<span>${pct(gold.making_pct)} of revenue</span>`);
+    if(gold.total_making)   goldRows += rrow('Making Charges', fI(gold.total_making), null,
+      `<span>${pct(gold.making_pct)} of revenue</span>${gold.avg_making_rate_per_g?`<span>₹${gold.avg_making_rate_per_g}/g avg rate</span>`:''}`);
     if(gold.total_wastage)  goldRows += rrow('Wastage Charges', fI(gold.total_wastage), null, `<span>${pct(gold.wastage_pct)} of revenue</span>`);
     if(gold.by_karatage && gold.by_karatage.length) {
       const maxKtRev = Math.max(...gold.by_karatage.map(k=>k.revenue),1);
@@ -123,7 +140,25 @@ function renderCategory(R) {
     c4 = sec('C4 — Diamond & Stone Analysis', diaRows);
   }
 
-  return c1 + c3 + c4;
+  // C6 Unlock guide
+  let c6 = '';
+  const guide = (R.extended||{}).unlock_guide||[];
+  if (guide.length) {
+    c6 = sec('C6 — Unlock More Insights',
+      guide.map(g => `
+        <div class="r-row">
+          <div class="r-row-top">
+            <span class="r-label">📊 ${g.label}</span>
+            <span class="r-value" style="font-size:10px;color:${g.mapped?'var(--amber)':'var(--grey)'}">
+              ${g.mapped ? 'Map column' : 'Add to template'}
+            </span>
+          </div>
+          <div class="r-meta"><span>${g.benefit}</span></div>
+        </div>`).join('')
+    );
+  }
+
+  return c1 + c3 + c4 + c6;
 }
 
 // ── TAB 3: STAFF ────────────────────────────────────────────────────
@@ -300,34 +335,64 @@ function renderCustomers(R) {
 
 // ── TAB 6: TRENDS ───────────────────────────────────────────────────
 function renderTrends(R) {
-  const ex     = R.extended||{};
-  const weekly = R.weekly||[];
-  const monthly= ex.monthly_trend||[];
+  const ex      = R.extended||{};
+  const weekly  = R.weekly||[];
+  const monthly = ex.monthly_trend||[];
+  const qtrs    = ex.quarterly_trend||[];
+  const season  = ex.seasonality||[];
   let html = '';
 
+  // T4 Monthly
   if (monthly.length >= 2) {
     const maxM = Math.max(...monthly.map(m=>m.ucp),1);
-    html += sec('Monthly Revenue Trend',
+    html += sec('T4 — Monthly Revenue',
       monthly.map(m=>rrow(m.label, fI(m.ucp), bar(m.ucp,maxM),
         `<span>${num(m.txns)} txns</span><span>${fI(m.avg_txn)} avg</span><span>${m.customers} custs</span>`
       )).join('')
     );
-    // Best/worst month
     const best  = monthly.reduce((a,b)=>a.ucp>b.ucp?a:b);
     const worst = monthly.reduce((a,b)=>a.ucp<b.ucp?a:b);
-    html += insight(`🏆 Best month: <strong>${best.label}</strong> — ${fI(best.ucp)}`,'good');
-    html += insight(`📉 Weakest month: <strong>${worst.label}</strong> — ${fI(worst.ucp)}`);
-  } else if (weekly.length) {
+    html += insight(`🏆 Best: <strong>${best.label}</strong> — ${fI(best.ucp)}`,'good');
+    html += insight(`📉 Weakest: <strong>${worst.label}</strong> — ${fI(worst.ucp)}`);
+  }
+
+  // T2 Quarterly
+  if (qtrs.length >= 2) {
+    const maxQ = Math.max(...qtrs.map(q=>q.ucp),1);
+    html += sec('T2 — Quarterly Revenue',
+      qtrs.map(q=>rrow(q.label, fI(q.ucp), bar(q.ucp,maxQ),
+        `<span>${num(q.txns)} txns</span><span>${fI(q.avg_txn)} avg</span>`
+      )).join('')
+    );
+  }
+
+  // T5 Seasonality — only if 2+ occurrences of same month
+  const seasonData = season.filter(s=>s.occurrences>=2);
+  if (seasonData.length >= 2) {
+    const maxS = Math.max(...seasonData.map(s=>s.avg_ucp),1);
+    html += sec('T5 — Seasonality (avg by month)',
+      seasonData.map(s=>rrow(s.label, fI(s.avg_ucp), bar(s.avg_ucp,maxS),
+        `<span>${s.occurrences} months of data</span><span>${num(s.txns)} total txns</span>`
+      )).join('')
+    );
+    const bestS  = seasonData.reduce((a,b)=>a.avg_ucp>b.avg_ucp?a:b);
+    const worstS = seasonData.reduce((a,b)=>a.avg_ucp<b.avg_ucp?a:b);
+    html += insight(`🏆 Peak month: <strong>${bestS.label}</strong> — ${fI(bestS.avg_ucp)} avg`,'good');
+    html += insight(`📉 Slow month: <strong>${worstS.label}</strong> — ${fI(worstS.avg_ucp)} avg`);
+  }
+
+  // Weekly fallback
+  if (!html && weekly.length) {
     const maxW = Math.max(...weekly.map(w=>w.ucp),1);
     html += sec('Weekly Revenue Trend',
       weekly.map(w=>rrow(w.week, fI(w.ucp), bar(w.ucp,maxW),
         `<span>${num(w.txns)} txns</span><span>${fI(w.avg_txn)} avg</span>`
       )).join('')
     );
-    html += `<div class="no-data" style="margin-top:8px">Upload multiple months of data to see monthly trend comparison.</div>`;
-  } else {
-    html = noData('Not enough data for trend analysis.');
+    html += `<div class="no-data" style="margin-top:8px">Upload multiple months of data to see monthly and quarterly trends.</div>`;
   }
+
+  if (!html) html = noData('Not enough data for trend analysis.');
   return html;
 }
 
@@ -349,7 +414,7 @@ function makeCard(c, idx) {
   const ad  = c.action_detail||{};
   const signals = (c.signals||[]).slice(0,2);
   return `
-    <div class="action-card" data-action-idx="${idx}" data-segment="${s}"
+    <div class="action-card" data-action-idx="${idx}" data-segment="${s.trim()}"
          style="border-left-color:${cfg.color}">
       <div class="action-card-top">
         <div class="action-card-left">
@@ -549,7 +614,7 @@ function filterActionCards(seg) {
     // Filter
     let shown = 0;
     cards.forEach(card => {
-      const match = card.dataset.segment === seg;
+      const match = (card.dataset.segment||"").trim() === seg.trim();
       card.style.display = match ? '' : 'none';
       if (match) shown++;
     });
@@ -578,7 +643,7 @@ function initActionDelegation() {
     // Pill tap → filter
     const pill = e.target.closest('.seg-pill-filter');
     if (pill) {
-      const seg = pill.dataset.filterSeg;
+      const seg = (pill.dataset.filterSeg||"").trim();
       const current = window._activeSegFilter;
       // Tap same pill again → clear filter
       filterActionCards(current === seg ? null : seg);

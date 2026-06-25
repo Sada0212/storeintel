@@ -246,6 +246,30 @@ function normalise(rows, config) {
     out.net_value       = toNum(row.net_value);
     out.weight          = toNum(row.weight);
 
+    // ── Extra numeric fields from mapping template
+    const EXTRA_NUMERIC = [
+      'making_charges','wastage','metal_value','diamond_weight_ct',
+      'diamond_count','diamond_value','stone_weight_g','color_stone_value',
+      'stone_value','net_value','tax_amount','gold_rate','platinum_rate',
+      'net_gold_weight_g','quantity','cost_price',
+    ];
+    for (const f of EXTRA_NUMERIC) {
+      if (row[f] !== undefined && row[f] !== null) {
+        out[f] = toNum(row[f]);
+      }
+    }
+
+    // ── Extra string/category fields
+    const EXTRA_STRING = [
+      'customer_city','customer_state','stone_type','metal_type',
+      'branch','collection','sku','karigar','customer_type','source_channel',
+    ];
+    for (const f of EXTRA_STRING) {
+      if (row[f] !== undefined && row[f] !== null) {
+        out[f] = String(row[f]).trim() || null;
+      }
+    }
+
     // ── Date
     const parsedDate = parseDate(row.transaction_date);
     if (!parsedDate) continue; // drop rows with no date
@@ -308,13 +332,34 @@ function parseDate(raw) {
 }
 
 function parseHour(raw) {
-  if (!raw) return null;
+  if (raw === null || raw === undefined || raw === '') return null;
+
+  // Excel stores time as decimal fraction of a day (e.g. 0.5 = 12:00, 0.75 = 18:00)
+  // SheetJS returns these as numbers between 0 and 1
+  const n = parseFloat(raw);
+  if (!isNaN(n) && n >= 0 && n < 1) {
+    return Math.floor(n * 24);
+  }
+
+  // Also handles Excel serial numbers > 1 (datetime) — extract time part
+  if (!isNaN(n) && n > 1) {
+    const timePart = n - Math.floor(n);
+    return Math.floor(timePart * 24);
+  }
+
   const s = String(raw).trim();
   // HH:MM or HH:MM:SS
   const hm = s.match(/^(\d{1,2}):(\d{2})/);
   if (hm) { const h = parseInt(hm[1]); return h >= 0 && h <= 23 ? h : null; }
-  const dt = new Date(`1970-01-01T${s}`);
+
+  // ISO datetime string
+  const dt = new Date(s);
   if (!isNaN(dt)) return dt.getHours();
+
+  // Try 1970 prefix for bare time strings
+  const dt2 = new Date(`1970-01-01T${s}`);
+  if (!isNaN(dt2)) return dt2.getHours();
+
   return null;
 }
 

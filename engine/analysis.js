@@ -913,7 +913,121 @@ const AnalysisExtended = (() => {
     };
   }
 
-  // ── MONTHLY TREND ─────────────────────────────────────────────
+  // ── E3 STORE METRICS (generic extra fields summary) ─────────
+  function storeMetrics(rows, mapping) {
+    const sales = rows.filter(r => r.is_sale !== false);
+    if (!sales.length) return [];
+    const gross = sum(sales, 'gross_value');
+
+    // Fields to show in E3 (not shown elsewhere)
+    const SHOW = [
+      {field:'net_value',   label:'Net Amount',       type:'money'},
+      {field:'tax_amount',  label:'GST / Tax',         type:'money'},
+      {field:'metal_value', label:'Metal Value',       type:'money'},
+      {field:'quantity',    label:'Pieces Sold',       type:'qty'},
+      {field:'gold_rate',   label:'Gold Rate (avg)',   type:'rate'},
+    ];
+
+    const result = [];
+    for (const {field, label, type} of SHOW) {
+      const hasMapped = mapping && mapping[field];
+      const hasData   = sales.some(r => toNum(r[field]) > 0);
+      if (!hasMapped || !hasData) continue;
+
+      const total = sum(sales, field);
+      const avg   = sales.length > 0 ? total / sales.length : 0;
+
+      if (type === 'money') {
+        result.push({ label, total: Math.round(total), avg: Math.round(avg),
+          pct: gross > 0 ? Math.round(total/gross*1000)/10 : 0, type });
+      } else if (type === 'qty') {
+        result.push({ label, total: Math.round(total), avg: Math.round(avg*10)/10, type });
+      } else if (type === 'rate') {
+        // For rates use average not sum
+        result.push({ label, total: Math.round(avg), avg: Math.round(avg), type });
+      }
+    }
+    return result;
+  }
+
+  // ── C6 UNLOCK GUIDE ──────────────────────────────────────────
+  function unlockGuide(rows, mapping) {
+    const sales = rows.filter(r => r.is_sale !== false);
+    const missing = [];
+
+    const checks = [
+      { field:'making_charges', label:'Making Charges',
+        benefit:'See making charge % of revenue and per-gram rate per RSO' },
+      { field:'metal_value',    label:'Metal Value',
+        benefit:'Understand metal vs making vs stone breakdown of each sale' },
+      { field:'diamond_weight_ct', label:'Diamond Weight',
+        benefit:'Diamond intensity analysis, rate per carat, net gold weight' },
+      { field:'customer_city',  label:'Customer City',
+        benefit:'Revenue by geography — which areas drive most sales' },
+      { field:'gold_rate',      label:'Gold Rate',
+        benefit:'Track gold rate fluctuation impact on revenue' },
+      { field:'quantity',       label:'Pieces Sold',
+        benefit:'Pieces per transaction, volume vs value analysis' },
+    ];
+
+    for (const {field, label, benefit} of checks) {
+      const isMapped = mapping && mapping[field];
+      const hasData  = isMapped && sales.some(r => toNum(r[field]) > 0 || (r[field] && String(r[field]).trim()));
+      if (!hasData) {
+        missing.push({ label, benefit, mapped: !!isMapped });
+      }
+    }
+    return missing;
+  }
+
+  // ── QUARTERLY TREND ──────────────────────────────────────────
+  function quarterlyTrend(rows) {
+    const sales = rows.filter(r => r.is_sale !== false && r.transaction_date);
+    const qtrs  = {};
+    for (const r of sales) {
+      const [y, m] = r.transaction_date.split('-');
+      const q = Math.ceil(parseInt(m) / 3);
+      const key = `${y}-Q${q}`;
+      if (!qtrs[key]) qtrs[key] = { key, label:`Q${q} ${y}`, rows:[] };
+      qtrs[key].rows.push(r);
+    }
+    return Object.values(qtrs).sort((a,b)=>a.key.localeCompare(b.key)).map(({label,rows:g})=>({
+      label, ucp: Math.round(sum(g,'gross_value')), txns: g.length,
+      avg_txn: g.length > 0 ? Math.round(sum(g,'gross_value')/g.length) : 0,
+      customers: new Set(g.map(r=>r.customer_name).filter(n=>n&&n!=='Unknown')).size,
+    }));
+  }
+
+  // ── SEASONALITY (best/worst by month name) ───────────────────
+  function seasonality(rows) {
+    const sales = rows.filter(r => r.is_sale !== false && r.transaction_date);
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const byMonth = {};
+    for (const r of sales) {
+      const m = parseInt(r.transaction_date.split('-')[1]) - 1;
+      const name = MONTHS[m];
+      if (!byMonth[name]) byMonth[name] = { label:name, months:0, ucp:0, txns:0 };
+      byMonth[name].ucp  += toNum(r.gross_value);
+      byMonth[name].txns += 1;
+      byMonth[name].months = 1; // count distinct occurrences separately
+    }
+    // Count distinct year-months per month name for averaging
+    const ymByName = {};
+    for (const r of sales) {
+      const parts = r.transaction_date.split('-');
+      const name  = MONTHS[parseInt(parts[1])-1];
+      const ym    = `${parts[0]}-${parts[1]}`;
+      if (!ymByName[name]) ymByName[name] = new Set();
+      ymByName[name].add(ym);
+    }
+    return Object.values(byMonth).map(m => ({
+      ...m,
+      occurrences: (ymByName[m.label]||new Set()).size,
+      avg_ucp: Math.round(m.ucp / ((ymByName[m.label]||new Set()).size || 1)),
+    })).sort((a,b) => MONTHS.indexOf(a.label) - MONTHS.indexOf(b.label));
+  }
+
+  // ── MONTHLY TREND ─────────────────────────────────────────────────
   function monthlyTrend(rows) {
     const sales = rows.filter(r => r.is_sale !== false && r.transaction_date);
     const months = {};
@@ -934,16 +1048,20 @@ const AnalysisExtended = (() => {
   }
 
   // ── RUN ALL EXTENDED ─────────────────────────────────────────
-  function runExtended(rows, config) {
+  function runExtended(rows, config, mapping) {
     return {
-      scorecard:     scorecard(rows, config),
-      gold:          goldAnalysis(rows),
-      diamond:       diamondAnalysis(rows),
-      hv_txns:       highValueTxns(rows, config),
-      concentration: concentration(rows),
-      frequency:     frequencyDistribution(rows),
-      demographics:  demographics(rows),
-      monthly_trend: monthlyTrend(rows),
+      scorecard:      scorecard(rows, config),
+      gold:           goldAnalysis(rows),
+      diamond:        diamondAnalysis(rows),
+      hv_txns:        highValueTxns(rows, config),
+      concentration:  concentration(rows),
+      frequency:      frequencyDistribution(rows),
+      demographics:   demographics(rows),
+      monthly_trend:  monthlyTrend(rows),
+      quarterly_trend:quarterlyTrend(rows),
+      seasonality:    seasonality(rows),
+      store_metrics:  storeMetrics(rows, mapping),
+      unlock_guide:   unlockGuide(rows, mapping),
     };
   }
 
@@ -954,8 +1072,8 @@ window.AnalysisExtended = AnalysisExtended;
 
 // Patch Analysis.runAll to include extended
 const _origRunAll2 = Analysis.runAll;
-Analysis.runAll = function(rows, config) {
-  const results   = _origRunAll2(rows, config);
-  results.extended = AnalysisExtended.runExtended(rows, config);
+Analysis.runAll = function(rows, config, mapping) {
+  const results    = _origRunAll2(rows, config);
+  results.extended = AnalysisExtended.runExtended(rows, config, mapping);
   return results;
 };

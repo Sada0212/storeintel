@@ -110,7 +110,7 @@ html, body {
 .upload-icon { font-size: 32px; margin-bottom: 8px; }
 .upload-zone h3 { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
 .upload-zone p, .upload-zone-text { font-size: 12px; color: var(--grey); }
-.file-name { font-size: 13px; color: var(--amber); font-weight: 600; margin-top: 6px; }
+.file-name { font-size: 12px; color: var(--amber); font-weight: 600; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block; }
 
 /* ── FIELDS ───────────────────────────────────────────────── */
 .field-group label {
