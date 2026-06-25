@@ -493,7 +493,7 @@ function initInstallPrompt() {
 // ── SERVICE WORKER ────────────────────────────────────────────────
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('/sw.js')
+  navigator.serviceWorker.register('/storeintel/sw.js', { scope: '/storeintel/' })
     .then(reg => {
       const checkWorker = w => {
         w?.addEventListener('statechange', () => {

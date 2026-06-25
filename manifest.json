@@ -1,9 +1,9 @@
 {
   "name": "StoreIntel",
   "short_name": "StoreIntel",
-  "description": "Jewellery store sales intelligence — offline, on your phone.",
-  "start_url": "/",
-  "scope": "/",
+  "description": "Jewellery store sales intelligence \u2014 offline, on your phone.",
+  "start_url": "/storeintel/",
+  "scope": "/storeintel/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0f1b2d",
@@ -34,6 +34,9 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["business", "finance"],
+  "categories": [
+    "business",
+    "finance"
+  ],
   "lang": "en-IN"
 }

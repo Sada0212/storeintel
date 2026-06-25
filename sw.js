@@ -1,27 +1,23 @@
 /* StoreIntel Service Worker v1.0
    Caches everything on first load. App runs 100% offline after. */
 
-const CACHE_NAME = 'storeintel-v16';
+const CACHE_NAME = 'storeintel-v17';
 
 // All files to cache on install
+const BASE = '/storeintel';
 const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-  '/app.js',
-  '/style.css',
-  '/manifest.json',
-  '/icons/icon-256.png',
-  '/icons/icon-black-256.png',
-  // JS engine files (to be added as each module is built)
-  '/libs/xlsx.full.min.js',
-  // '/engine/ingestion.js',
-  // '/engine/analysis.js',
-  // '/engine/jewellery_metrics.js',
-  // '/engine/insights.js',
-  // '/engine/renderer.js',
-  // Third-party libs (bundled locally — no CDN dependency)
-  '/libs/xlsx.full.min.js',
-  '/libs/chart.min.js',
+  BASE + '/',
+  BASE + '/index.html',
+  BASE + '/app.js',
+  BASE + '/style.css',
+  BASE + '/manifest.json',
+  BASE + '/icons/icon-256.png',
+  BASE + '/icons/icon-192.png',
+  BASE + '/icons/icon-512.png',
+  BASE + '/engine/ingestion.js',
+  BASE + '/engine/analysis.js',
+  BASE + '/engine/renderer.js',
+  BASE + '/libs/xlsx.full.min.js',
 ];
 
 // ── INSTALL: pre-cache all app files ─────────────────────────────
