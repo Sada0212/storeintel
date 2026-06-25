@@ -1,0 +1,16 @@
+/*
+  Cache-Control: no-cache
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/engine/*
+  Cache-Control: no-cache
+
+/*.js
+  Cache-Control: no-cache
+
+/*.html
+  Cache-Control: no-cache

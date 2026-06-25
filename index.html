@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1b2d">
+  <meta name="description" content="Jewellery store sales intelligence — works offline on your phone.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="StoreIntel">
+  <link rel="apple-touch-icon" href="icons/icon-256.png">
+  <link rel="manifest" href="manifest.json">
+  <title>StoreIntel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ── TOP BAR ─────────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <img src="icons/icon-256.png" class="topbar-logo" alt="StoreIntel">
+      <span class="topbar-name">Store<span>Intel</span></span>
+    </div>
+    <div class="topbar-status">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-label">Checking…</span>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCREEN 1 — SETUP (first time only)
+       Store name + upload mapping.xlsx
+  ══════════════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-setup">
+
+    <div class="install-banner hidden" id="install-banner">
+      <div class="install-banner-text">
+        <strong>Add to Home Screen</strong><br>Works offline after install.
+      </div>
+      <button class="install-btn btn-install-trigger">Install</button>
+      <button class="install-btn btn-dismiss-install"
+              style="background:transparent;color:var(--grey);padding:8px 6px">✕</button>
+    </div>
+
+    <div class="home-hero">
+      <img src="icons/icon-256.png" class="home-hero-icon" alt="">
+      <h1>Welcome to<br>StoreIntel</h1>
+      <p>Set up once. Generate reports every month in seconds.</p>
+    </div>
+
+    <!-- Step 1: Store name -->
+    <div class="setup-step">
+      <div class="setup-step-num">1</div>
+      <div class="setup-step-body">
+        <div class="setup-step-title">Your store name</div>
+        <div class="field-group" style="margin:8px 0 0">
+          <input type="text" id="setup-store-name"
+                 placeholder="e.g. Mia Jewellers, Velachery"
+                 autocomplete="organization">
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Upload mapping file -->
+    <div class="setup-step">
+      <div class="setup-step-num">2</div>
+      <div class="setup-step-body">
+        <div class="setup-step-title">Upload your column mapping file</div>
+        <div class="setup-step-hint">
+          This is the <strong>StoreIntel_Column_Mapping_Template.xlsx</strong>
+          you filled in for your desktop setup. WhatsApp it to yourself and pick it here.
+        </div>
+        <div class="upload-zone small" id="mapping-upload-zone">
+          <input type="file" id="mapping-file-input" accept=".xlsx,.xls">
+          <div class="upload-icon" style="font-size:24px">📋</div>
+          <div class="upload-zone-text">Tap to pick mapping file</div>
+          <div class="file-name hidden" id="mapping-file-name"></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary mt-16" id="btn-setup-continue" disabled>
+      Read Mapping & Continue →
+    </button>
+
+    <p class="text-sm text-grey mt-8" style="text-align:center">
+      Files never leave this device.
+    </p>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCREEN 2 — MAPPING REVIEW
+       Shows what was read from mapping.xlsx — owner confirms
+  ══════════════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-mapping-review">
+
+    <div class="review-header">
+      <div class="review-store-name" id="review-store-name"></div>
+      <div class="review-subtitle">Column mapping — review before saving</div>
+    </div>
+
+    <!-- Mandatory fields -->
+    <div class="review-section">
+      <div class="review-section-title">Required fields</div>
+      <div id="review-mandatory-rows"></div>
+    </div>
+
+    <!-- Optional fields -->
+    <div class="review-section">
+      <div class="review-section-title">Optional fields</div>
+      <div id="review-optional-rows"></div>
+    </div>
+
+    <!-- Warning if mandatory fields missing -->
+    <div class="review-warning hidden" id="review-warning">
+      <span class="warning-icon">⚠️</span>
+      <span id="review-warning-text"></span>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-ghost" id="btn-review-back" style="flex:0 0 80px;padding:14px 0">
+        ← Back
+      </button>
+      <button class="btn btn-primary" id="btn-review-confirm">
+        Save Mapping & Continue →
+      </button>
+    </div>
+
+    <p class="text-sm text-grey mt-8" style="text-align:center">
+      Saved on this phone. You won't need to do this again.
+    </p>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCREEN 3 — HOME (every month)
+       Shows store name + mapping status. Just pick POS file.
+  ══════════════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-home">
+
+    <!-- Store card -->
+    <div class="store-card">
+      <div class="store-card-left">
+        <div class="store-card-name" id="home-store-name"></div>
+        <div class="store-card-status">
+          <span class="status-dot online" style="display:inline-block"></span>
+          <span id="home-mapping-status">Mapping ready</span>
+        </div>
+      </div>
+      <button class="store-card-reset" id="btn-reset-store" title="Change store">✎</button>
+    </div>
+
+    <!-- Mapped fields summary (collapsed) -->
+    <div class="mapping-summary" id="mapping-summary">
+      <div class="mapping-summary-title" id="btn-toggle-mapping">
+        View column mapping ▾
+      </div>
+      <div class="mapping-summary-rows hidden" id="mapping-summary-rows">
+        <!-- populated by JS -->
+      </div>
+      <button class="btn-update-mapping" id="btn-update-mapping">
+        📋 Update mapping file
+      </button>
+    </div>
+
+    <!-- POS file upload -->
+    <div class="section-label">This month's sales export</div>
+
+    <div class="upload-zone" id="pos-upload-zone">
+      <input type="file" id="pos-file-input" accept=".xlsx,.xls,.csv">
+      <div class="upload-icon">📊</div>
+      <h3>Tap to pick your POS export</h3>
+      <p>.xlsx or .csv from your POS system</p>
+      <div class="file-name hidden" id="pos-file-name"></div>
+    </div>
+
+    <button class="btn btn-primary mt-16" id="btn-generate" disabled>
+      Generate Report
+    </button>
+
+    <p class="text-sm text-grey mt-8" style="text-align:center">
+      Your data never leaves this device.
+    </p>
+
+    <!-- Install to home screen — shown only when installable -->
+    <button class="btn-install-home hidden btn-install-trigger" id="btn-install-home">
+      📲 Add StoreIntel to Home Screen
+    </button>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCREEN 4 — PROCESSING
+  ══════════════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-processing">
+    <div class="processing-wrap">
+      <div class="spinner"></div>
+      <div class="processing-store" id="processing-store"></div>
+      <div class="processing-step" id="processing-step">Starting…</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCREEN 5 — REPORT (tabbed layout)
+  ══════════════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-report">
+
+    <!-- Sticky report header -->
+    <div class="rpt-header">
+      <div>
+        <div class="rpt-store-name" id="report-store"></div>
+        <div class="rpt-period"     id="report-period"></div>
+        <div id="report-badge"></div>
+      </div>
+      <div class="rpt-header-btns">
+        <button class="rpt-btn" id="btn-download-pdf">PDF</button>
+        <button class="rpt-btn rpt-btn-ghost" id="btn-new-report">✕ New</button>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <nav class="tab-bar">
+      <button class="tab-btn active" data-tab="tab-summary">
+        <span class="tab-icon">📊</span><span class="tab-label">Summary</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-category">
+        <span class="tab-icon">💎</span><span class="tab-label">Category</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-staff">
+        <span class="tab-icon">👤</span><span class="tab-label">Staff</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-discount">
+        <span class="tab-icon">🏷</span><span class="tab-label">Discount</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-customers">
+        <span class="tab-icon">👥</span><span class="tab-label">Customers</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-trends">
+        <span class="tab-icon">📈</span><span class="tab-label">Trends</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-action">
+        <span class="tab-icon">⚡</span><span class="tab-label">Actions</span>
+      </button>
+    </nav>
+
+    <!-- Tab panels -->
+    <div class="tab-panels">
+
+      <div class="tab-panel active" id="tab-summary">
+        <div class="tab-scroll">
+          <div class="kpi-grid" id="kpi-zone"></div>
+          <div id="tab-insights"></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-category">
+        <div class="tab-scroll" id="tab-category-content"></div>
+      </div>
+
+      <div class="tab-panel" id="tab-staff">
+        <div class="tab-scroll" id="tab-staff-content"></div>
+      </div>
+
+      <div class="tab-panel" id="tab-discount">
+        <div class="tab-scroll" id="tab-discount-content"></div>
+      </div>
+
+      <div class="tab-panel" id="tab-customers">
+        <div class="tab-scroll" id="tab-customers-content"></div>
+      </div>
+
+      <div class="tab-panel" id="tab-trends">
+        <div class="tab-scroll" id="tab-trends-content"></div>
+      </div>
+      <div class="tab-panel" id="tab-action">
+        <div class="tab-scroll" id="tab-action-content"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCREEN 6 — ERROR
+  ══════════════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-error">
+    <div class="error-wrap">
+      <div class="error-icon">⚠️</div>
+      <div class="error-title">Something went wrong</div>
+      <div class="error-message" id="error-message"></div>
+      <button class="btn btn-primary mt-16" id="btn-retry" style="max-width:200px">Try Again</button>
+      <button class="btn btn-ghost mt-8" id="btn-back-home" style="max-width:200px">Go Home</button>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<div class="toast" id="toast"></div>
+
+<script src="libs/xlsx.full.min.js"></script>
+<script src="engine/ingestion.js"></script>
+<script src="engine/analysis.js"></script>
+<script src="engine/renderer.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
