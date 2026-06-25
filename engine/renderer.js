@@ -343,6 +343,34 @@ const SEG = {
   'Lost':                 {icon:'💤',color:'#555e6b'},
 };
 
+function makeCard(c, idx) {
+  const s   = c.segment||'Needs Attention';
+  const cfg = SEG[s]||{icon:'○',color:'var(--grey)'};
+  const ad  = c.action_detail||{};
+  const signals = (c.signals||[]).slice(0,2);
+  return `
+    <div class="action-card" data-action-idx="${idx}" data-segment="${s}"
+         style="border-left-color:${cfg.color}">
+      <div class="action-card-top">
+        <div class="action-card-left">
+          <div class="action-name">${c.customer_name}</div>
+          <div class="action-seg" style="color:${cfg.color}">${cfg.icon} ${s}</div>
+        </div>
+        <div class="action-right">
+          <div class="action-value">${fI(c.monetary)}</div>
+          <div class="action-days">${c.recency_days||0}d ago</div>
+        </div>
+      </div>
+      ${signals.length?`<div class="action-signals">${signals.map(sg=>`<span class="action-signal">⚑ ${sg}</span>`).join('')}</div>`:''}
+      <div class="action-preview">${(ad.message||c.action||'').substring(0,80)}…</div>
+      <div class="action-footer">
+        <span class="action-pill">📱 ${ad.channel||'WhatsApp'}</span>
+        <span class="action-pill">⏰ ${ad.timing||'This month'}</span>
+        <span class="action-tap">Tap to open →</span>
+      </div>
+    </div>`;
+}
+
 function renderAction(rfm) {
   if (!rfm||!rfm.available)
     return noData('Not enough customer data for RFM. Need named customers with transactions.');
@@ -353,51 +381,33 @@ function renderAction(rfm) {
   const order  = ['At Risk — High Value','At Risk — Loyal','Champion','High Value',
                    'Loyal','New Customer','Needs Attention','Lost'];
 
+  // Store all customers globally for filtering + modal
+  window._rfmCustomers = rfm.customers||[];
+  window._activeSegFilter = null;
+
   const pills = order.filter(s=>segs[s]).map(s=>{
     const cfg=SEG[s]||{icon:'○',color:'var(--grey)'};
-    return `<div class="seg-pill" style="border-color:${cfg.color}">
-      <span style="font-size:11px;font-weight:600">${cfg.icon} ${s}</span>
-      <span class="seg-count" style="color:${cfg.color}">${segs[s]}</span>
-    </div>`;
+    return `
+      <div class="seg-pill seg-pill-filter" data-filter-seg="${s}"
+           style="border-color:${cfg.color};cursor:pointer">
+        <span style="font-size:11px;font-weight:600">${cfg.icon} ${s}</span>
+        <span class="seg-count" style="color:${cfg.color}">${segs[s]}</span>
+      </div>`;
   }).join('');
 
   const alert = atRisk>0
     ? insight(`🚨 ${atRisk} customer${atRisk>1?'s':''} at high churn risk — act now`,'warn')
     : insight('✅ No critical churn risk customers','good');
 
-  window._rfmCustomers = rfm.customers||[];
-
-  const cards = (rfm.customers||[]).slice(0,20).map((c,idx)=>{
-    const s=c.segment||'Needs Attention';
-    const cfg=SEG[s]||{icon:'○',color:'var(--grey)'};
-    const ad=c.action_detail||{};
-    const signals=(c.signals||[]).slice(0,2);
-    return `
-      <div class="action-card" data-action-idx="${idx}" style="border-left-color:${cfg.color}">
-        <div class="action-card-top">
-          <div class="action-card-left">
-            <div class="action-name">${c.customer_name}</div>
-            <div class="action-seg" style="color:${cfg.color}">${cfg.icon} ${s}</div>
-          </div>
-          <div class="action-right">
-            <div class="action-value">${fI(c.monetary)}</div>
-            <div class="action-days">${c.recency_days||0}d ago</div>
-          </div>
-        </div>
-        ${signals.length?`<div class="action-signals">${signals.map(sg=>`<span class="action-signal">⚑ ${sg}</span>`).join('')}</div>`:''}
-        <div class="action-preview">${(ad.message||c.action||'').substring(0,80)}…</div>
-        <div class="action-footer">
-          <span class="action-pill">📱 ${ad.channel||'WhatsApp'}</span>
-          <span class="action-pill">⏰ ${ad.timing||'This month'}</span>
-          <span class="action-tap">Tap to act →</span>
-        </div>
-      </div>`;
-  }).join('');
+  const cards = (rfm.customers||[]).slice(0,50).map((c,idx)=>makeCard(c,idx)).join('');
 
   return alert +
-    `<div class="seg-pills">${pills}</div>` +
-    `<div class="r-sub-title" style="margin-top:16px">Action List — sorted by urgency</div>` +
-    cards;
+    `<div class="seg-pills" id="seg-pills-grid">${pills}</div>` +
+    `<div class="action-filter-bar">
+       <span class="action-filter-label" id="action-filter-label">All customers (${(rfm.customers||[]).length})</span>
+       <button class="action-filter-clear hidden" id="action-filter-clear">Clear filter ✕</button>
+     </div>` +
+    `<div id="action-cards-list">${cards}</div>`;
 }
 
 // ── ACTION MODAL ────────────────────────────────────────────────────
@@ -515,22 +525,78 @@ function initTabs() {
   });
 }
 
+function filterActionCards(seg) {
+  const cards   = document.querySelectorAll('#action-cards-list .action-card');
+  const label   = document.getElementById('action-filter-label');
+  const clearBtn= document.getElementById('action-filter-clear');
+  const pills   = document.querySelectorAll('.seg-pill-filter');
+
+  window._activeSegFilter = seg;
+
+  // Update pill active states
+  pills.forEach(p => {
+    const isActive = p.dataset.filterSeg === seg;
+    p.classList.toggle('seg-pill-active', isActive);
+  });
+
+  if (!seg) {
+    // Show all
+    cards.forEach(card => card.style.display = '');
+    const total = (window._rfmCustomers||[]).length;
+    if (label) label.textContent = `All customers (${total})`;
+    if (clearBtn) clearBtn.classList.add('hidden');
+  } else {
+    // Filter
+    let shown = 0;
+    cards.forEach(card => {
+      const match = card.dataset.segment === seg;
+      card.style.display = match ? '' : 'none';
+      if (match) shown++;
+    });
+    const cfg = SEG[seg]||{icon:'○'};
+    if (label) label.textContent = `${cfg.icon} ${seg} — ${shown} customer${shown!==1?'s':''}`;
+    if (clearBtn) clearBtn.classList.remove('hidden');
+  }
+}
+
 function initActionDelegation() {
-  // Attach to the stable parent panel, not the content div that gets replaced
   const panel = document.getElementById('tab-action');
   if (!panel) return;
-  // Use a flag to avoid duplicate listeners across multiple report runs
   if (panel._actionListenerAttached) return;
   panel._actionListenerAttached = true;
+
   panel.addEventListener('click', function(e) {
+    // Card tap → open modal
     const card = e.target.closest('[data-action-idx]');
-    if (!card) return;
-    const idx = parseInt(card.dataset.actionIdx);
-    console.log('[ActionCenter] card tapped, idx:', idx,
-                'customers available:', (window._rfmCustomers||[]).length);
-    ActionCenter.open(idx);
+    if (card) {
+      const idx = parseInt(card.dataset.actionIdx);
+      console.log('[ActionCenter] card tapped idx:', idx);
+      ActionCenter.open(idx);
+      return;
+    }
+
+    // Pill tap → filter
+    const pill = e.target.closest('.seg-pill-filter');
+    if (pill) {
+      const seg = pill.dataset.filterSeg;
+      const current = window._activeSegFilter;
+      // Tap same pill again → clear filter
+      filterActionCards(current === seg ? null : seg);
+      return;
+    }
+
+    // Clear button
+    if (e.target.id === 'action-filter-clear') {
+      filterActionCards(null);
+    }
   });
-  console.log('[ActionCenter] delegation attached to #tab-action');
+
+  // Clear filter button (separate listener for safety)
+  document.getElementById('action-filter-clear')?.addEventListener('click', () => {
+    filterActionCards(null);
+  });
+
+  console.log('[ActionCenter] delegation attached');
 }
 
 // ── MAIN RENDER ─────────────────────────────────────────────────────

@@ -1248,3 +1248,34 @@ html, body {
   }
   .brand-footer strong { color: #b8860b !important; }
 }
+
+/* ── ACTION FILTER BAR ────────────────────────────────────── */
+.action-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0 6px;
+  margin-top: 4px;
+}
+.action-filter-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--grey);
+}
+.action-filter-clear {
+  font-size: 11px;
+  color: var(--amber);
+  background: transparent;
+  border: 1px solid var(--amber-dim);
+  border-radius: 99px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+/* Active segment pill */
+.seg-pill-filter { transition: opacity 0.15s, transform 0.1s; }
+.seg-pill-filter:active { transform: scale(0.96); }
+.seg-pill-active {
+  background: var(--navy-light) !important;
+  box-shadow: 0 0 0 2px var(--amber);
+}
