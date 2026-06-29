@@ -348,18 +348,23 @@ function renderTrends(R) {
   const season  = ex.seasonality||[];
   let html = '';
 
-  // T4 Monthly
-  if (monthly.length >= 2) {
+  // T4 Monthly — show even for 1 month, compare callouts only for 2+
+  if (monthly.length >= 1) {
     const maxM = Math.max(...monthly.map(m=>m.ucp),1);
     html += sec('T4 — Monthly Revenue',
       monthly.map(m=>rrow(m.label, fI(m.ucp), bar(m.ucp,maxM),
         `<span>${num(m.txns)} txns</span><span>${fI(m.avg_txn)} avg</span><span>${m.customers} custs</span>`
       )).join('')
     );
-    const best  = monthly.reduce((a,b)=>a.ucp>b.ucp?a:b);
-    const worst = monthly.reduce((a,b)=>a.ucp<b.ucp?a:b);
-    html += insight(`🏆 Best: <strong>${best.label}</strong> — ${fI(best.ucp)}`,'good');
-    html += insight(`📉 Weakest: <strong>${worst.label}</strong> — ${fI(worst.ucp)}`);
+    if (monthly.length >= 2) {
+      const best  = monthly.reduce((a,b)=>a.ucp>b.ucp?a:b);
+      const worst = monthly.reduce((a,b)=>a.ucp<b.ucp?a:b);
+      html += insight(`🏆 Best: <strong>${best.label}</strong> — ${fI(best.ucp)}`,'good');
+      if (best.label !== worst.label)
+        html += insight(`📉 Weakest: <strong>${worst.label}</strong> — ${fI(worst.ucp)}`);
+    } else {
+      html += insight(`ℹ️ Upload more months of data to compare trends and see best/weakest month analysis.`);
+    }
   }
 
   // T2 Quarterly
@@ -466,16 +471,30 @@ function renderAction(rfm) {
       </div>`;
   }).join('');
 
-  const alert = atRisk>0
-    ? insight(`🚨 ${atRisk} customer${atRisk>1?'s':''} at high churn risk — act now`,'warn')
-    : insight('✅ No critical churn risk customers','good');
+  const totalCusts = (rfm.customers||[]).length;
+  const atRiskHV   = segs['At Risk — High Value'] || 0;
+  const atRiskLoy  = segs['At Risk — Loyal'] || 0;
+  const totalAtRisk = atRiskHV + atRiskLoy;
+
+  // Header: churn alert uses Engine C risk scores (CRITICAL+HIGH across ALL segments)
+  // Tiles use RFM segment counts — these are different cuts, both correct
+  const alert = atRisk > 0
+    ? insight(`🚨 ${atRisk} customer${atRisk>1?'s':''} at high churn risk across all segments — tap a tile to filter`,'warn')
+    : insight('✅ No critical churn risk customers this period','good');
+
+  // Legend so owner understands tile vs alert difference
+  const legend = `<div style="font-size:11px;color:var(--grey);padding:4px 0 8px;line-height:1.6">
+    <strong>Tiles</strong> = RFM segments (buying behaviour). 
+    <strong>Churn alert</strong> = customers overdue by their own pattern regardless of segment.
+    Tap any tile to see only that group.
+  </div>`;
 
   const cards = (rfm.customers||[]).map((c,idx)=>makeCard(c,idx)).join('');
 
-  return alert +
+  return alert + legend +
     `<div class="seg-pills" id="seg-pills-grid">${pills}</div>` +
     `<div class="action-filter-bar">
-       <span class="action-filter-label" id="action-filter-label">All customers (${(rfm.customers||[]).length})</span>
+       <span class="action-filter-label" id="action-filter-label">All ${totalCusts} customers — tap a tile to filter</span>
        <button class="action-filter-clear hidden" id="action-filter-clear">Clear filter ✕</button>
      </div>` +
     `<div id="action-cards-list">${cards}</div>`;

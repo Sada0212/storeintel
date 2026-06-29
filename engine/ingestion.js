@@ -88,6 +88,12 @@ const AUTO_KNOWN = {
   'time of sale':      { field: 'transaction_time' },
   'bill time':         { field: 'transaction_time' },
   'txn time':          { field: 'transaction_time' },
+  'sale time':         { field: 'transaction_time' },
+  'invoice time':      { field: 'transaction_time' },
+  'trans time':        { field: 'transaction_time' },
+  'transaction time':  { field: 'transaction_time' },
+  'sale hour':         { field: 'transaction_time' },
+  'hour':              { field: 'transaction_time' },
   'transaction type':  { field: 'transaction_type' },
   'txn type':          { field: 'transaction_type' },
   'bill type':         { field: 'transaction_type' },
@@ -226,6 +232,29 @@ function applyMapping(rows, mapping) {
     }
     return row;
   });
+}
+
+// ── TIME FALLBACK SCANNER ─────────────────────────────────────────────
+// If transaction_time is null on >90% of rows after mapping, scan all
+// unmapped numeric columns to find one that looks like Excel time fractions
+// (values between 0 and 1). This catches time columns with unusual names.
+function sniffTimeColumn(rawRows, mappedCols) {
+  if (!rawRows || !rawRows.length) return null;
+  const allCols = Object.keys(rawRows[0]);
+  const unmapped = allCols.filter(c => !Object.values(mappedCols).includes(c));
+  const sample   = rawRows.slice(0, Math.min(50, rawRows.length));
+  for (const col of unmapped) {
+    const vals = sample.map(r => r[col]).filter(v => v !== null && v !== undefined && v !== '');
+    if (vals.length < 5) continue;
+    const nums = vals.map(v => parseFloat(v)).filter(v => !isNaN(v));
+    if (nums.length < vals.length * 0.8) continue; // mostly non-numeric
+    const inRange = nums.filter(v => v > 0 && v < 1);
+    if (inRange.length >= nums.length * 0.8) {
+      console.log('[S3 sniff] Found time column:', col, '— sample values:', nums.slice(0,3));
+      return col;
+    }
+  }
+  return null;
 }
 
 function normalise(rows, config) {
@@ -421,6 +450,14 @@ function ingest(arrayBuffer, storeName, config = JEWELLERY_CONFIG, savedMapping 
   }
 
   // 3. Apply + normalise
+  // If time column wasn't explicitly mapped, try to sniff it from unmapped columns
+  if (!mapping.transaction_time) {
+    const sniffed = sniffTimeColumn(rows, mapping);
+    if (sniffed) {
+      mapping = { ...mapping, transaction_time: sniffed };
+      console.log('[S3 sniff] Auto-mapped transaction_time to column:', sniffed);
+    }
+  }
   const mapped  = applyMapping(rows, mapping);
   const cleaned = normalise(mapped, config);
 
