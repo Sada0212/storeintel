@@ -472,27 +472,9 @@ function renderAction(rfm) {
   }).join('');
 
   const totalCusts = (rfm.customers||[]).length;
-  const atRiskHV   = segs['At Risk — High Value'] || 0;
-  const atRiskLoy  = segs['At Risk — Loyal'] || 0;
-  const totalAtRisk = atRiskHV + atRiskLoy;
-
-  // Header: churn alert uses Engine C risk scores (CRITICAL+HIGH across ALL segments)
-  // Tiles use RFM segment counts — these are different cuts, both correct
-  const alert = atRisk > 0
-    ? insight(`🚨 ${atRisk} customer${atRisk>1?'s':''} at high churn risk across all segments — tap a tile to filter`,'warn')
-    : insight('✅ No critical churn risk customers this period','good');
-
-  // Legend so owner understands tile vs alert difference
-  const legend = `<div style="font-size:11px;color:var(--grey);padding:4px 0 8px;line-height:1.6">
-    <strong>Tiles</strong> = RFM segments (buying behaviour). 
-    <strong>Churn alert</strong> = customers overdue by their own pattern regardless of segment.
-    Tap any tile to see only that group.
-  </div>`;
-
   const cards = (rfm.customers||[]).map((c,idx)=>makeCard(c,idx)).join('');
 
-  return alert + legend +
-    `<div class="seg-pills" id="seg-pills-grid">${pills}</div>` +
+  return `<div class="seg-pills" id="seg-pills-grid">${pills}</div>` +
     `<div class="action-filter-bar">
        <span class="action-filter-label" id="action-filter-label">All ${totalCusts} customers — tap a tile to filter</span>
        <button class="action-filter-clear hidden" id="action-filter-clear">Clear filter ✕</button>

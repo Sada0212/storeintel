@@ -311,6 +311,22 @@ function normalise(rows, config) {
       if (h !== null) out.transaction_hour = h;
     }
 
+    // ── Time fallback: if still no hour, check ALL raw fields for Excel time fractions
+    // This catches time columns that were never mapped or mapped under a different field
+    if (out.transaction_hour === null || out.transaction_hour === undefined) {
+      for (const [k, v] of Object.entries(row)) {
+        if (k === 'transaction_date' || k === 'transaction_time') continue;
+        const n = parseFloat(v);
+        if (!isNaN(n) && n > 0 && n < 1) {
+          const h = Math.floor(n * 24);
+          if (h >= 6 && h <= 23) { // sanity check: store hours only
+            out.transaction_hour = h;
+            break;
+          }
+        }
+      }
+    }
+
     // ── is_sale flag
     if (row.transaction_type) {
       const t = String(row.transaction_type).toUpperCase().trim();
