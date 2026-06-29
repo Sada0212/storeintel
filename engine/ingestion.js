@@ -481,28 +481,30 @@ function ingest(arrayBuffer, storeName, config = JEWELLERY_CONFIG, savedMapping 
     console.log('[S3 sniff] Found time column:', sniffed);
   }
 
-  // Pre-compute transaction_hour from raw rows for every row.
-  // Must happen on raw rows BEFORE applyMapping drops unmapped columns.
+  // Pre-compute transaction_hour from raw rows BEFORE applyMapping drops unmapped cols.
+  // SheetJS with cellDates:true returns Date objects for datetime cells.
   const rawHourMap = {};
   rows.forEach((row, i) => {
-    // Priority 1: use the mapped time column (now correctly sniffed above)
-    const mappedTimeCol = mapping.transaction_time;
-    if (mappedTimeCol && row[mappedTimeCol] != null) {
-      const h = parseHour(row[mappedTimeCol]);
-      if (h !== null) { rawHourMap[i] = h; return; }
-    }
-    // Priority 2: scan all columns for datetime strings with HH:MM:SS
     for (const [k, v] of Object.entries(row)) {
-      const s = String(v || '');
-      const m = s.match(/(\d{1,2}):(\d{2}):\d{2}/);
-      if (m) {
-        const h = parseInt(m[1]);
+      if (v === null || v === undefined || v === '') continue;
+
+      // Case 1: JS Date object (SheetJS cellDates:true)
+      if (v instanceof Date && !isNaN(v)) {
+        const h = v.getHours();
+        if (h > 0) { rawHourMap[i] = h; return; } // skip midnight (likely date-only)
+      }
+
+      const s = String(v);
+
+      // Case 2: datetime string with HH:MM:SS e.g. '2026-04-01 12:54:38.126'
+      const dtm = s.match(/(\d{1,2}):(\d{2}):\d{2}/);
+      if (dtm) {
+        const h = parseInt(dtm[1]);
         if (h >= 0 && h <= 23) { rawHourMap[i] = h; return; }
       }
-    }
-    // Priority 3: scan all columns for Excel time fraction (0 < v < 1)
-    for (const [k, v] of Object.entries(row)) {
-      const n = parseFloat(v);
+
+      // Case 3: Excel time fraction (0 < v < 1)
+      const n = parseFloat(s);
       if (!isNaN(n) && n > 0 && n < 1) {
         const h = Math.floor(n * 24);
         if (h >= 6 && h <= 23) { rawHourMap[i] = h; return; }
