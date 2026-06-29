@@ -45,6 +45,7 @@ function loadFromStorage() {
         } catch(e) { /* fall through to saved mapping */ }
       }
       return { storeName: name, mappingData: JSON.parse(mapping) };
+    }
   } catch(e) {}
   return null;
 }
