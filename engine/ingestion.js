@@ -240,17 +240,37 @@ function applyMapping(rows, mapping) {
 // (values between 0 and 1). This catches time columns with unusual names.
 function sniffTimeColumn(rawRows, mappedCols) {
   if (!rawRows || !rawRows.length) return null;
-  const allCols = Object.keys(rawRows[0]);
-  const unmapped = allCols.filter(c => !Object.values(mappedCols).includes(c));
+  const allCols  = Object.keys(rawRows[0]);
+  const mappedVals = Object.values(mappedCols);
+  // Include ALL columns — even if already mapped, the time col might be mapped to wrong field
   const sample   = rawRows.slice(0, Math.min(50, rawRows.length));
-  for (const col of unmapped) {
+
+  for (const col of allCols) {
+    // Skip columns already correctly mapped to non-time fields
+    if (mappedVals.includes(col) && mappedCols.transaction_time !== col) {
+      // only skip if this col is mapped to something other than transaction_time
+      const mappedField = Object.entries(mappedCols).find(([k,v]) => v === col)?.[0];
+      if (mappedField && mappedField !== 'transaction_time') continue;
+    }
+
     const vals = sample.map(r => r[col]).filter(v => v !== null && v !== undefined && v !== '');
     if (vals.length < 5) continue;
+
+    // Pattern 1: Excel time fractions (0 < v < 1)
     const nums = vals.map(v => parseFloat(v)).filter(v => !isNaN(v));
-    if (nums.length < vals.length * 0.8) continue; // mostly non-numeric
-    const inRange = nums.filter(v => v > 0 && v < 1);
-    if (inRange.length >= nums.length * 0.8) {
-      console.log('[S3 sniff] Found time column:', col, '— sample values:', nums.slice(0,3));
+    if (nums.length >= vals.length * 0.8) {
+      const inRange = nums.filter(v => v > 0 && v < 1);
+      if (inRange.length >= nums.length * 0.8) {
+        console.log('[S3 sniff] Found decimal time column:', col);
+        return col;
+      }
+    }
+
+    // Pattern 2: datetime strings containing time component (HH:MM:SS)
+    const strs = vals.map(v => String(v));
+    const hasTime = strs.filter(s => /\d{1,2}:\d{2}:\d{2}/.test(s));
+    if (hasTime.length >= vals.length * 0.8) {
+      console.log('[S3 sniff] Found datetime string column:', col, '— sample:', strs[0]);
       return col;
     }
   }
@@ -461,22 +481,31 @@ function ingest(arrayBuffer, storeName, config = JEWELLERY_CONFIG, savedMapping 
     console.log('[S3 sniff] Found time column:', sniffed);
   }
 
-  // Also: pre-compute transaction_hour from raw rows for every row,
-  // so even if mapping misses it, normalise() gets the hour directly.
+  // Pre-compute transaction_hour from raw rows for every row.
+  // Must happen on raw rows BEFORE applyMapping drops unmapped columns.
   const rawHourMap = {};
   rows.forEach((row, i) => {
-    // Check mapped time col first
+    // Priority 1: use the mapped time column (now correctly sniffed above)
     const mappedTimeCol = mapping.transaction_time;
     if (mappedTimeCol && row[mappedTimeCol] != null) {
       const h = parseHour(row[mappedTimeCol]);
       if (h !== null) { rawHourMap[i] = h; return; }
     }
-    // Fallback: scan all columns for Excel time fraction (0 < v < 1)
+    // Priority 2: scan all columns for datetime strings with HH:MM:SS
+    for (const [k, v] of Object.entries(row)) {
+      const s = String(v || '');
+      const m = s.match(/(\d{1,2}):(\d{2}):\d{2}/);
+      if (m) {
+        const h = parseInt(m[1]);
+        if (h >= 0 && h <= 23) { rawHourMap[i] = h; return; }
+      }
+    }
+    // Priority 3: scan all columns for Excel time fraction (0 < v < 1)
     for (const [k, v] of Object.entries(row)) {
       const n = parseFloat(v);
       if (!isNaN(n) && n > 0 && n < 1) {
         const h = Math.floor(n * 24);
-        if (h >= 6 && h <= 23) { rawHourMap[i] = h; break; }
+        if (h >= 6 && h <= 23) { rawHourMap[i] = h; return; }
       }
     }
   });
