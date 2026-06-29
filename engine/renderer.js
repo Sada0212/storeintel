@@ -93,7 +93,7 @@ function renderSummary(R) {
         sub = `Average this period`;
       } else {
         val = fI(m.total);
-        sub = `${pct(m.pct)} of revenue`;
+        sub = `Avg ${fI(m.avg)} per bill`;
       }
       const col = m.type === 'qty' ? 'var(--green)' : (m.type === 'rate' || m.type === 'rate_full') ? 'var(--amber)' : 'var(--blue)';
       return `<div style="background:var(--navy-light);border-radius:10px;padding:12px 14px;">

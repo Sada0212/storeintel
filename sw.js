@@ -1,7 +1,7 @@
 /* StoreIntel Service Worker v1.0
    Caches everything on first load. App runs 100% offline after. */
 
-const CACHE_NAME = 'storeintel-v37';
+const CACHE_NAME = 'storeintel-v38';
 
 // All files to cache on install
 const BASE = '/storeintel';
