@@ -311,6 +311,7 @@ function renderCustomers(R) {
 
   // Cu5 Demographics
   const demo = ex.demographics;
+  console.log('[Cu5] available:', demo?.available, '| by_city:', (demo?.by_city||[]).length);
   if (demo && demo.available) {
     let demoHtml = '';
     if (demo.by_city && demo.by_city.length) {
@@ -336,6 +337,11 @@ function renderCustomers(R) {
 // ── TAB 6: TRENDS ───────────────────────────────────────────────────
 function renderTrends(R) {
   const ex      = R.extended||{};
+  console.log('[Trends] monthly:', (ex.monthly_trend||[]).length,
+    '| quarterly:', (ex.quarterly_trend||[]).length,
+    '| seasonality:', (ex.seasonality||[]).length,
+    '| weekly:', (R.weekly||[]).length,
+    '| monthly sample:', (ex.monthly_trend||[]).slice(0,3).map(m=>m.label+':'+m.ucp));
   const weekly  = R.weekly||[];
   const monthly = ex.monthly_trend||[];
   const qtrs    = ex.quarterly_trend||[];

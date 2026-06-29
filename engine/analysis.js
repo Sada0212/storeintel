@@ -388,18 +388,26 @@ const RFM = (() => {
     return 4;
   }
 
-  // ── QUINTILE SCORING (port of pd.qcut) ───────────────────────
+  // ── QUINTILE SCORING — port of pd.qcut(col.rank(method='first'), 5) ──
   function qcutScore(values, reverse = false) {
-    // Rank values, divide into 5 quintiles, assign score 1-5
-    const indexed = values.map((v, i) => ({ v, i }))
-      .sort((a, b) => a.v - b.v);
-    const n = indexed.length;
+    const n = values.length;
+    if (n === 0) return [];
+
+    // Step 1: rank with method='first' (ties broken by original order)
+    const indexed = values.map((v, i) => ({ v, i }));
+    // Stable sort — JS sort is stable in modern engines
+    indexed.sort((a, b) => a.v - b.v || a.i - b.i);
+    const ranks = new Array(n);
+    indexed.forEach(({ i }, rank) => { ranks[i] = rank + 1; }); // 1-based
+
+    // Step 2: assign quintile 1-5 based on rank
+    // Same as pd.qcut with 5 equal-width rank buckets
     const scores = new Array(n);
-    indexed.forEach(({ i }, rank) => {
-      let score = Math.ceil((rank + 1) / n * 5);
+    for (let i = 0; i < n; i++) {
+      let score = Math.ceil(ranks[i] / n * 5);
       score = Math.min(5, Math.max(1, score));
       scores[i] = reverse ? (6 - score) : score;
-    });
+    }
     return scores;
   }
 
@@ -587,11 +595,17 @@ const RFM = (() => {
     const hvThresh       = (config && config.high_value_threshold) || 100000;
     const churnThreshold = 180;
 
-    // Group by customer name
+    // Group by customer name — filter same way Python does (exclude null/blank/Unknown)
     const custMap = {};
     for (const r of sales) {
-      const key = r.customer_name || 'Unknown';
-      if (key === 'Unknown') continue;
+      const raw = r.customer_name;
+      if (!raw) continue;
+      const key = String(raw).trim();
+      // Skip blank, Unknown, generic placeholders, purely numeric IDs
+      if (!key || key.toLowerCase() === 'unknown' || key === '-' ||
+          key === 'N/A' || key === 'NA' || key === 'CASH' ||
+          key === 'RETAIL' || key === 'WALK IN' || key === 'WALK-IN' ||
+          key === 'WALKIN' || /^\d+$/.test(key)) continue;
       if (!custMap[key]) custMap[key] = [];
       custMap[key].push(r);
     }
