@@ -942,11 +942,11 @@ const AnalysisExtended = (() => {
 
     // Fields to show in E3 (not shown elsewhere)
     const SHOW = [
-      {field:'net_value',   label:'Net Amount',       type:'money'},
-      {field:'tax_amount',  label:'GST / Tax',         type:'money'},
-      {field:'metal_value', label:'Metal Value',       type:'money'},
-      {field:'quantity',    label:'Pieces Sold',       type:'qty'},
-      {field:'gold_rate',   label:'Gold Rate (avg)',   type:'rate'},
+      {field:'net_value',    label:'Net Amount',        type:'money'},
+      {field:'metal_value',  label:'Metal Value',       type:'money'},
+      {field:'stone_value',  label:'Total Stone Value', type:'money'},
+      {field:'quantity',     label:'Pieces Sold',       type:'qty'},
+      {field:'gold_rate',    label:'Gold Rate (avg)',   type:'rate_full'},
     ];
 
     const result = [];
@@ -964,7 +964,9 @@ const AnalysisExtended = (() => {
       } else if (type === 'qty') {
         result.push({ label, total: Math.round(total), avg: Math.round(avg*10)/10, type });
       } else if (type === 'rate') {
-        // For rates use average not sum
+        result.push({ label, total: Math.round(avg), avg: Math.round(avg), type });
+      } else if (type === 'rate_full') {
+        // Show full number (no abbreviation) — e.g. 14,286 not 14.2K
         result.push({ label, total: Math.round(avg), avg: Math.round(avg), type });
       }
     }
