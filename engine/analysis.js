@@ -954,7 +954,6 @@ const AnalysisExtended = (() => {
       {field:'metal_value',     label:'Metal Value',        type:'money'},
       {field:'stone_value',     label:'Stone Value',        type:'money'},
       {field:'making_charges',  label:'Making Charges',     type:'money'},
-      {field:'quantity',        label:'Pieces Sold',        type:'qty'},
       {field:'gold_rate',       label:'Gold Rate (avg)',    type:'rate_full'},
       {field:'net_value',       label:'Net Amount',         type:'money'},
     ];
