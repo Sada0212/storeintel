@@ -81,16 +81,26 @@ function renderSummary(R) {
   let e3 = '';
   const sm = (ex.store_metrics||[]);
   if (sm.length) {
-    e3 = sec('E3 — Store Metrics',
-      sm.map(m => {
-        if (m.type === 'qty')
-          return rrow(m.label, num(m.total), null, `<span>Avg ${m.avg} per txn</span>`);
-        if (m.type === 'rate')
-          return rrow(m.label, fI(m.total), null, `<span>Average this period</span>`);
-        return rrow(m.label, fI(m.total), null,
-          `<span>${pct(m.pct)} of revenue</span><span>Avg ${fI(m.avg)} per txn</span>`);
-      }).join('')
-    );
+    const cardHtml = sm.map(m => {
+      let val, sub;
+      if (m.type === 'qty') {
+        val = num(m.total);
+        sub = `Avg ${m.avg} per txn`;
+      } else if (m.type === 'rate') {
+        val = fI(m.total);
+        sub = `Average this period`;
+      } else {
+        val = fI(m.total);
+        sub = `${pct(m.pct)} of revenue · Avg ${fI(m.avg)} per txn`;
+      }
+      const col = m.type === 'qty' ? 'var(--green)' : m.type === 'rate' ? 'var(--amber)' : 'var(--blue)';
+      return `<div style="background:var(--navy-light);border-radius:10px;padding:14px 16px;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${m.label}</div>
+        <div style="font-size:22px;font-weight:700;color:${col}">${val}</div>
+        <div style="font-size:11px;color:var(--grey);margin-top:4px">${sub}</div>
+      </div>`;
+    }).join('');
+    e3 = `<div style="padding:4px 0"><div style="font-size:13px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.5px;padding-bottom:10px;border-bottom:2px solid var(--amber);margin-bottom:12px">E3 — Store Metrics</div>${cardHtml}</div>`;
   }
 
   document.getElementById('tab-insights').innerHTML = (ins?sec('Key Insights',ins):'') + scHtml + e3;
@@ -190,7 +200,7 @@ function renderStaff(R) {
     s3 = sec('S3 — Time of Sale',
       tos.map(t=>rrow(t.period, fI(t.ucp), bar(t.ucp,maxTos),
         `<span>${num(t.txns)} txns</span><span>${pct(t.pct)} of revenue</span><span>${fI(t.avg_txn)} avg</span>`,
-        'var(--navy-light)'
+        'var(--amber)'
       )).join('')
     );
   }
