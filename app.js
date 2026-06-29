@@ -18,13 +18,15 @@ const state = {
 };
 
 // ── STORAGE KEYS ──────────────────────────────────────────────────
-const STORE_KEY   = 'si_store_name';
-const MAPPING_KEY = 'si_mapping';
+const STORE_KEY      = 'si_store_name';
+const MAPPING_KEY    = 'si_mapping';
+const MAPPING_B64KEY = 'si_mapping_b64'; // raw mapping file as base64 — re-parsed fresh each time
 
-function saveToStorage(storeName, mappingData) {
+function saveToStorage(storeName, mappingData, mappingB64 = null) {
   try {
     localStorage.setItem(STORE_KEY,   storeName);
     localStorage.setItem(MAPPING_KEY, JSON.stringify(mappingData));
+    if (mappingB64) localStorage.setItem(MAPPING_B64KEY, mappingB64);
   } catch(e) { console.warn('Storage save failed', e); }
 }
 
@@ -32,7 +34,17 @@ function loadFromStorage() {
   try {
     const name    = localStorage.getItem(STORE_KEY);
     const mapping = localStorage.getItem(MAPPING_KEY);
-    if (name && mapping) return { storeName: name, mappingData: JSON.parse(mapping) };
+    const b64     = localStorage.getItem(MAPPING_B64KEY);
+    if (name && mapping) {
+      // Always re-parse mapping from raw file if available — picks up any new field aliases
+      if (b64) {
+        try {
+          const buf = Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
+          const fresh = Ingestion.readMappingFile(buf);
+          return { storeName: name, mappingData: fresh, mappingB64: b64 };
+        } catch(e) { /* fall through to saved mapping */ }
+      }
+      return { storeName: name, mappingData: JSON.parse(mapping) };
   } catch(e) {}
   return null;
 }
@@ -190,7 +202,15 @@ function initMappingReviewScreen() {
       filledCount:  state.parsedMapping.filledCount,
       savedAt:      new Date().toISOString(),
     };
-    saveToStorage(state.storeName, mappingData);
+    // Also save raw mapping file as base64 so it can be re-parsed fresh on every upload
+    let mappingB64 = null;
+    if (state.mappingFileBuffer) {
+      try {
+        const bytes = new Uint8Array(state.mappingFileBuffer);
+        mappingB64 = btoa(String.fromCharCode(...bytes));
+      } catch(e) {}
+    }
+    saveToStorage(state.storeName, mappingData, mappingB64);
     showToast(isUpdate ? 'Mapping updated ✓' : 'Mapping saved ✓');
     loadHomeScreen(state.storeName, mappingData);
     showScreen('screen-home');

@@ -940,13 +940,14 @@ const AnalysisExtended = (() => {
     if (!sales.length) return [];
     const gross = sum(sales, 'gross_value');
 
-    // Fields to show in E3 (not shown elsewhere)
+    // Fields to show in E3
     const SHOW = [
-      {field:'net_value',    label:'Net Amount',        type:'money'},
-      {field:'metal_value',  label:'Metal Value',       type:'money'},
-      {field:'stone_value',  label:'Total Stone Value', type:'money'},
-      {field:'quantity',     label:'Pieces Sold',       type:'qty'},
-      {field:'gold_rate',    label:'Gold Rate (avg)',   type:'rate_full'},
+      {field:'metal_value',     label:'Metal Value',        type:'money'},
+      {field:'stone_value',     label:'Stone Value',        type:'money'},
+      {field:'making_charges',  label:'Making Charges',     type:'money'},
+      {field:'quantity',        label:'Pieces Sold',        type:'qty'},
+      {field:'gold_rate',       label:'Gold Rate (avg)',    type:'rate_full'},
+      {field:'net_value',       label:'Net Amount',         type:'money'},
     ];
 
     const result = [];

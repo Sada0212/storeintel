@@ -87,23 +87,25 @@ function renderSummary(R) {
         val = num(m.total);
         sub = `Avg ${m.avg} per txn`;
       } else if (m.type === 'rate' || m.type === 'rate_full') {
-        // rate_full shows full number (e.g. 14,286 not 14.2K)
         val = m.type === 'rate_full'
           ? '₹' + m.total.toLocaleString('en-IN')
           : fI(m.total);
         sub = `Average this period`;
       } else {
         val = fI(m.total);
-        sub = `${pct(m.pct)} of revenue · Avg ${fI(m.avg)} per txn`;
+        sub = `${pct(m.pct)} of revenue`;
       }
       const col = m.type === 'qty' ? 'var(--green)' : (m.type === 'rate' || m.type === 'rate_full') ? 'var(--amber)' : 'var(--blue)';
-      return `<div style="background:var(--navy-light);border-radius:10px;padding:14px 16px;margin-bottom:10px">
-        <div style="font-size:11px;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${m.label}</div>
-        <div style="font-size:22px;font-weight:700;color:${col}">${val}</div>
-        <div style="font-size:11px;color:var(--grey);margin-top:4px">${sub}</div>
+      return `<div style="background:var(--navy-light);border-radius:10px;padding:12px 14px;">
+        <div style="font-size:10px;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">${m.label}</div>
+        <div style="font-size:20px;font-weight:700;color:${col};line-height:1.2">${val}</div>
+        <div style="font-size:11px;color:var(--grey);margin-top:3px">${sub}</div>
       </div>`;
     }).join('');
-    e3 = `<div style="padding:4px 0"><div style="font-size:13px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.5px;padding-bottom:10px;border-bottom:2px solid var(--amber);margin-bottom:12px">E3 — Store Metrics</div>${cardHtml}</div>`;
+    e3 = `<div style="padding:4px 0">
+      <div style="font-size:13px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.5px;padding-bottom:10px;border-bottom:2px solid var(--amber);margin-bottom:12px">E3 — Store Metrics</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${cardHtml}</div>
+    </div>`;
   }
 
   document.getElementById('tab-insights').innerHTML = (ins?sec('Key Insights',ins):'') + scHtml + e3;

@@ -85,8 +85,18 @@ const AUTO_KNOWN = {
   'sale date':         { field: 'transaction_date' },
   'txn date':          { field: 'transaction_date' },
   'invoice date':      { field: 'transaction_date' },
-  'total stone value': { field: 'stone_value' },
+  'total stone value':  { field: 'stone_value' },
   'stone value':        { field: 'stone_value' },
+  'total metal value':  { field: 'metal_value' },
+  'metal value':        { field: 'metal_value' },
+  'total making':       { field: 'making_charges' },
+  'making charge':      { field: 'making_charges' },
+  'making amount':      { field: 'making_charges' },
+  'gold rate':          { field: 'gold_rate' },
+  'platinum rate':      { field: 'platinum_rate' },
+  'total invoice':      { field: 'net_value' },
+  'invoice value':      { field: 'net_value' },
+  'total tax':          { field: 'tax_amount' },
   'time of sale':      { field: 'transaction_time' },
   'bill time':         { field: 'transaction_time' },
   'txn time':          { field: 'transaction_time' },
@@ -461,7 +471,10 @@ function ingest(arrayBuffer, storeName, config = JEWELLERY_CONFIG, savedMapping 
   // 2. Determine mapping
   let mapping, pos, confidence, missingMandatory;
   if (savedMapping) {
-    mapping = savedMapping;
+    // Start with saved mapping, then auto-detect any fields not in saved mapping
+    // This means new aliases added in updates automatically work without re-setup
+    const autoDetected = autoMap(columns, config);
+    mapping = { ...autoDetected.mapping, ...savedMapping }; // savedMapping wins for conflicts
     pos     = 'saved';
     confidence = 'saved';
     missingMandatory = [];
@@ -580,6 +593,12 @@ const TEMPLATE_TO_UNIVERSAL = {
   'Stone Weight (grams)':            'stone_weight_g',
   'Stone Value':                     'color_stone_value',
   'Total Stone Value':               'stone_value',
+  'Stone Value (combined)':          'stone_value',
+  'Stone Value (Combined)':          'stone_value',
+  'Total Metal Value':               'metal_value',
+  'Total Making Charges':            'making_charges',
+  'Total Invoice Value':             'net_value',
+  'Total Tax (SGST, CGST, UTGST, IGST)': 'tax_amount',
   'Certification':                   'cert_no',
   'Metal Value':                     'metal_value',
   'Making Charges':                  'making_charges',
