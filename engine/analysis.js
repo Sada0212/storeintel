@@ -42,10 +42,16 @@ const Analysis = (() => {
     const retDisc   = sum(returns, 'discount_amount');
     const netDisc   = grossDisc + retDisc;
     const discPct   = grossUcp ? netDisc / grossUcp * 100 : 0;
-    const cmTxns    = sales.length;
-    const grnTxns   = returns.length;
+    // Bills = unique invoice numbers. Line items = rows. Pieces = sum of quantity.
+    // We report BILLS as the primary transaction count — that's what the owner thinks of as a "sale".
+    const allBills  = new Set(sales.map(r => r.invoice_number).filter(Boolean));
+    const cmTxns    = allBills.size || sales.length; // fallback to rows if invoice_number not mapped
+    const grnTxns   = new Set(returns.map(r => r.invoice_number).filter(Boolean)).size || returns.length;
+    const lineItems = sales.length; // total product rows
     const custSet   = new Set(sales.map(r => r.customer_name).filter(n => n && n !== 'Unknown'));
     const avgTxn    = cmTxns ? grossUcp / cmTxns : 0;
+    const totalPieces = sum(sales, 'quantity');
+    const avgPiecesPerBill = cmTxns ? round2(totalPieces / cmTxns) : 0;
     const totalWt   = sum(sales, 'weight');
 
     const dates  = sales.map(r => r.transaction_date).filter(Boolean).sort();
@@ -56,8 +62,11 @@ const Analysis = (() => {
       gross_ucp:   grossUcp,  ret_amt:  retAmt,   net_ucp:  netUcp,
       gross_disc:  grossDisc, net_disc: netDisc,  disc_pct: round2(discPct),
       cm_txns:     cmTxns,    grn_txns: grnTxns,
+      line_items:  lineItems,
       unique_cust: custSet.size,
       avg_txn:     Math.round(avgTxn),
+      total_pieces: Math.round(totalPieces),
+      avg_pieces_per_bill: avgPiecesPerBill,
       total_wt:    round2(totalWt),
       date_min:    dateMin,   date_max: dateMax,
     };

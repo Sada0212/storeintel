@@ -41,9 +41,10 @@ function renderSummary(R) {
   document.getElementById('kpi-zone').innerHTML = [
     {v:fI(s.gross_ucp),                          l:'Gross Sales'},
     {v:fI(s.net_ucp),                            l:'Net of Returns'},
-    {v:num(s.cm_txns),                           l:'Transactions'},
+    {v:num(s.cm_txns),                           l:'Bills'},
+    {v:s.avg_pieces_per_bill>0?(+s.avg_pieces_per_bill).toFixed(2)+'x':'—', l:'Pieces / Bill'},
     {v:s.unique_cust>0?num(s.unique_cust):'—',   l:'Customers'},
-    {v:fI(s.avg_txn),                            l:'Avg Ticket'},
+    {v:fI(s.avg_txn),                            l:'Avg Ticket / Bill'},
     {v:pct(s.disc_pct),                          l:'Discount Rate'},
   ].map(({v,l})=>`<div class="kpi-card"><div class="kpi-value">${v}</div><div class="kpi-label">${l}</div></div>`).join('');
 
