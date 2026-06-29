@@ -464,7 +464,7 @@ function renderAction(rfm) {
     ? insight(`🚨 ${atRisk} customer${atRisk>1?'s':''} at high churn risk — act now`,'warn')
     : insight('✅ No critical churn risk customers','good');
 
-  const cards = (rfm.customers||[]).slice(0,50).map((c,idx)=>makeCard(c,idx)).join('');
+  const cards = (rfm.customers||[]).map((c,idx)=>makeCard(c,idx)).join('');
 
   return alert +
     `<div class="seg-pills" id="seg-pills-grid">${pills}</div>` +

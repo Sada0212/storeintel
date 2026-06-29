@@ -266,7 +266,12 @@ const Analysis = (() => {
 
   // ── TIME OF SALE ──────────────────────────────────────────────
   function timeOfSale(rows, config) {
-    const sales = rows.filter(r => r.is_sale !== false && r.transaction_hour != null);
+    const allSales = rows.filter(r => r.is_sale !== false);
+    const sales = allSales.filter(r => r.transaction_hour != null);
+    console.log('[S3] total sales:', allSales.length,
+      '| with hour:', sales.length,
+      '| sample hours:', sales.slice(0,3).map(r=>r.transaction_hour),
+      '| sample raw time:', allSales.slice(0,3).map(r=>r.transaction_time));
     if (!sales.length) return [];
 
     const openH   = (config && config.store_open_hour)  || 10;
@@ -893,6 +898,8 @@ const AnalysisExtended = (() => {
     const sales    = rows.filter(r => r.is_sale !== false);
     const hasCity  = sales.some(r => r.customer_city && String(r.customer_city).trim());
     const hasState = sales.some(r => r.customer_state && String(r.customer_state).trim());
+    console.log('[Cu5] hasCity:', hasCity, 'hasState:', hasState,
+      '| sample city:', sales.slice(0,3).map(r=>r.customer_city));
     if (!hasCity && !hasState) return { available: false };
 
     const total = sum(sales, 'gross_value');
@@ -1030,6 +1037,8 @@ const AnalysisExtended = (() => {
   // ── MONTHLY TREND ─────────────────────────────────────────────────
   function monthlyTrend(rows) {
     const sales = rows.filter(r => r.is_sale !== false && r.transaction_date);
+    console.log('[Trends] total sales for monthly:', sales.length,
+      '| sample dates:', sales.slice(0,3).map(r=>r.transaction_date));
     const months = {};
     const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     for (const r of sales) {

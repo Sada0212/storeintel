@@ -277,7 +277,7 @@ function normalise(rows, config) {
     out.transaction_hour = parsedDate.hour;       // 0-23 or null
 
     // ── Time (separate column — higher priority)
-    if (row.transaction_time) {
+    if (row.transaction_time !== null && row.transaction_time !== undefined) {
       const h = parseHour(row.transaction_time);
       if (h !== null) out.transaction_hour = h;
     }
@@ -344,7 +344,8 @@ function parseHour(raw) {
   // Also handles Excel serial numbers > 1 (datetime) — extract time part
   if (!isNaN(n) && n > 1) {
     const timePart = n - Math.floor(n);
-    return Math.floor(timePart * 24);
+    const h = Math.floor(timePart * 24);
+    return h >= 0 && h <= 23 ? h : null;
   }
 
   const s = String(raw).trim();
