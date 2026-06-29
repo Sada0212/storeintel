@@ -305,26 +305,12 @@ function normalise(rows, config) {
     out.transaction_date = parsedDate.dateStr;   // 'YYYY-MM-DD'
     out.transaction_hour = parsedDate.hour;       // 0-23 or null
 
-    // ── Time (separate column — higher priority)
-    if (row.transaction_time !== null && row.transaction_time !== undefined) {
+    // ── Time: use pre-computed raw hour (bypasses mapping gaps entirely)
+    if (row._raw_hour !== undefined && row._raw_hour !== null) {
+      out.transaction_hour = row._raw_hour;
+    } else if (row.transaction_time !== null && row.transaction_time !== undefined) {
       const h = parseHour(row.transaction_time);
       if (h !== null) out.transaction_hour = h;
-    }
-
-    // ── Time fallback: if still no hour, check ALL raw fields for Excel time fractions
-    // This catches time columns that were never mapped or mapped under a different field
-    if (out.transaction_hour === null || out.transaction_hour === undefined) {
-      for (const [k, v] of Object.entries(row)) {
-        if (k === 'transaction_date' || k === 'transaction_time') continue;
-        const n = parseFloat(v);
-        if (!isNaN(n) && n > 0 && n < 1) {
-          const h = Math.floor(n * 24);
-          if (h >= 6 && h <= 23) { // sanity check: store hours only
-            out.transaction_hour = h;
-            break;
-          }
-        }
-      }
     }
 
     // ── is_sale flag
@@ -466,15 +452,40 @@ function ingest(arrayBuffer, storeName, config = JEWELLERY_CONFIG, savedMapping 
   }
 
   // 3. Apply + normalise
-  // If time column wasn't explicitly mapped, try to sniff it from unmapped columns
-  if (!mapping.transaction_time) {
-    const sniffed = sniffTimeColumn(rows, mapping);
-    if (sniffed) {
-      mapping = { ...mapping, transaction_time: sniffed };
-      console.log('[S3 sniff] Auto-mapped transaction_time to column:', sniffed);
-    }
+  // Sniff for time column in raw rows — always run so we catch it even if
+  // savedMapping has a stale or missing transaction_time entry.
+  // After applyMapping, unmapped columns are dropped, so we must do this on raw rows.
+  const sniffed = sniffTimeColumn(rows, mapping);
+  if (sniffed) {
+    mapping = { ...mapping, transaction_time: sniffed };
+    console.log('[S3 sniff] Found time column:', sniffed);
   }
+
+  // Also: pre-compute transaction_hour from raw rows for every row,
+  // so even if mapping misses it, normalise() gets the hour directly.
+  const rawHourMap = {};
+  rows.forEach((row, i) => {
+    // Check mapped time col first
+    const mappedTimeCol = mapping.transaction_time;
+    if (mappedTimeCol && row[mappedTimeCol] != null) {
+      const h = parseHour(row[mappedTimeCol]);
+      if (h !== null) { rawHourMap[i] = h; return; }
+    }
+    // Fallback: scan all columns for Excel time fraction (0 < v < 1)
+    for (const [k, v] of Object.entries(row)) {
+      const n = parseFloat(v);
+      if (!isNaN(n) && n > 0 && n < 1) {
+        const h = Math.floor(n * 24);
+        if (h >= 6 && h <= 23) { rawHourMap[i] = h; break; }
+      }
+    }
+  });
+
   const mapped  = applyMapping(rows, mapping);
+  // Inject pre-computed hours into mapped rows
+  mapped.forEach((row, i) => {
+    if (rawHourMap[i] !== undefined) row._raw_hour = rawHourMap[i];
+  });
   const cleaned = normalise(mapped, config);
 
   if (!cleaned.length) throw new Error('No valid sales rows found after parsing. Check column mapping.');
