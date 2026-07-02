@@ -30,6 +30,103 @@ function saveToStorage(storeName, mappingData, mappingB64 = null) {
   } catch(e) { console.warn('Storage save failed', e); }
 }
 
+
+// ══════════════════════════════════════════════════════════════════
+// INDEXED DB — Report History (v45)
+// Stores last 3 reports per store. Survives tab/browser close.
+// ══════════════════════════════════════════════════════════════════
+const IDB_NAME    = 'StoreIntelDB';
+const IDB_VERSION = 1;
+const IDB_STORE   = 'reports';
+const MAX_REPORTS = 3;
+
+function openIDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        const store = db.createObjectStore(IDB_STORE, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('by_store', 'storeName', { unique: false });
+        store.createIndex('by_store_time', ['storeName','savedAt'], { unique: false });
+      }
+    };
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+async function idbGetReports(storeName) {
+  try {
+    const db  = await openIDB();
+    return new Promise((res, rej) => {
+      const tx  = db.transaction(IDB_STORE, 'readonly');
+      const idx = tx.objectStore(IDB_STORE).index('by_store');
+      const req = idx.getAll(storeName);
+      req.onsuccess = () => {
+        // Sort newest first
+        const sorted = (req.result || []).sort((a,b) =>
+          new Date(b.savedAt) - new Date(a.savedAt)
+        );
+        res(sorted.slice(0, MAX_REPORTS));
+      };
+      req.onerror = () => rej(req.error);
+    });
+  } catch(e) { console.warn('[IDB] getReports failed', e); return []; }
+}
+
+async function idbSaveReport(storeName, fileName, rows, analysisResults) {
+  try {
+    const db = await openIDB();
+    // Compute summary for the card display
+    const sales = rows.filter(r => r.is_sale !== false);
+    const dates = rows.map(r => r.transaction_date_str).filter(Boolean).sort();
+    const gross = sales.reduce((s,r) => s + (parseFloat(r.gross_value)||0), 0);
+    const bills = new Set(sales.map(r => r.invoice_number).filter(Boolean)).size || sales.length;
+
+    const record = {
+      storeName,
+      fileName,
+      savedAt:     new Date().toISOString(),
+      periodStart: dates[0]  || '',
+      periodEnd:   dates[dates.length-1] || '',
+      txnCount:    sales.length,
+      billCount:   bills,
+      grossTotal:  gross,
+      transactions: rows,   // full parsed array
+    };
+
+    return new Promise(async (res, rej) => {
+      // Enforce MAX_REPORTS per store — delete oldest if needed
+      const existing = await idbGetReports(storeName);
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      const os = tx.objectStore(IDB_STORE);
+
+      if (existing.length >= MAX_REPORTS) {
+        // Delete oldest (last in sorted array)
+        const toDelete = existing.slice(MAX_REPORTS - 1);
+        toDelete.forEach(r => os.delete(r.id));
+      }
+
+      const addReq = os.add(record);
+      addReq.onsuccess = () => res(true);
+      addReq.onerror   = () => rej(addReq.error);
+    });
+  } catch(e) { console.warn('[IDB] saveReport failed', e); return false; }
+}
+
+async function idbDeleteReport(id) {
+  try {
+    const db = await openIDB();
+    return new Promise((res, rej) => {
+      const tx  = db.transaction(IDB_STORE, 'readwrite');
+      const req = tx.objectStore(IDB_STORE).delete(id);
+      req.onsuccess = () => res(true);
+      req.onerror   = () => rej(req.error);
+    });
+  } catch(e) { return false; }
+}
+
 function loadFromStorage() {
   try {
     const name    = localStorage.getItem(STORE_KEY);
@@ -395,9 +492,13 @@ async function startGenerate() {
 
     Renderer.render(analysisResults, saved.storeName, period, result.confidence);
 
-    // v40: initialise date filter with raw transaction rows
-    // DateFilter stores rows in window.__SI_TRANSACTIONS__ and builds chip bar
+    // v40: initialise date filter
     DateFilter.init(result.rows, saved);
+
+    // v45: auto-save report to IndexedDB
+    idbSaveReport(saved.storeName, state.posFileName, result.rows, analysisResults)
+      .then(ok => { if (ok) showToast('Report saved ✓'); })
+      .catch(() => {});
 
   } catch(err) {
     console.error(err);
@@ -601,6 +702,18 @@ document.addEventListener('DOMContentLoaded', () => {
   initHomeScreen();
 
   // Error screen buttons
+  // Drawer screen buttons
+  document.getElementById('btn-drawer-upload')?.addEventListener('click', () => {
+    showScreen('screen-home');
+  });
+  document.getElementById('btn-drawer-change-store')?.addEventListener('click', () => {
+    clearStorage();
+    state.storeName = '';
+    const storeInput = document.getElementById('setup-store-name');
+    if (storeInput) storeInput.value = '';
+    showScreen('screen-setup');
+  });
+
   document.getElementById('btn-retry')?.addEventListener('click', () => {
     const saved = loadFromStorage();
     showScreen(saved ? 'screen-home' : 'screen-setup');
@@ -621,8 +734,120 @@ document.addEventListener('DOMContentLoaded', () => {
   if (saved) {
     state.storeName = saved.storeName;
     loadHomeScreen(saved.storeName, saved.mappingData);
-    showScreen('screen-home');
+    // Show drawer if saved reports exist
+    initDrawerScreen(saved.storeName, saved.mappingData);
   } else {
     showScreen('screen-setup');
   }
 });
+
+// ══════════════════════════════════════════════════════════════════
+// DRAWER SCREEN — Recent reports (v45)
+// ══════════════════════════════════════════════════════════════════
+function fmtPeriod(start, end) {
+  if (!start) return 'Unknown period';
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmt(s) {
+    if (!s) return '';
+    const [y,m,d] = s.split('-');
+    return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
+  }
+  return fmt(start) + (end && end !== start ? ' – ' + fmt(end) : '');
+}
+
+function fmtGross(val) {
+  if (!val) return '—';
+  if (val >= 10000000) return `₹${(val/10000000).toFixed(2)}Cr`;
+  if (val >= 100000)   return `₹${(val/100000).toFixed(2)}L`;
+  if (val >= 1000)     return `₹${(val/1000).toFixed(1)}K`;
+  return `₹${Math.round(val).toLocaleString('en-IN')}`;
+}
+
+function fmtSavedAt(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `Saved ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+async function initDrawerScreen(storeName, mappingData) {
+  const reports = await idbGetReports(storeName);
+  const drawerEl = document.getElementById('screen-drawer');
+
+  if (!reports.length) {
+    // No saved reports — go straight to home
+    loadHomeScreen(storeName, mappingData);
+    showScreen('screen-home');
+    return;
+  }
+
+  // Render drawer cards
+  const list = document.getElementById('drawer-report-list');
+  list.innerHTML = reports.map(r => `
+    <div class="drawer-card" data-id="${r.id}">
+      <div class="drawer-card-body">
+        <div class="drawer-card-period">${fmtPeriod(r.periodStart, r.periodEnd)}</div>
+        <div class="drawer-card-meta">
+          ${r.billCount || r.txnCount} bills · ${fmtGross(r.grossTotal)}
+          <span class="drawer-card-saved">${fmtSavedAt(r.savedAt)}</span>
+        </div>
+        <div class="drawer-card-file">${r.fileName || ''}</div>
+      </div>
+      <button class="drawer-card-open" onclick="loadSavedReport(${r.id})">Open</button>
+    </div>
+  `).join('');
+
+  document.getElementById('drawer-store-name').textContent = storeName;
+  loadHomeScreen(storeName, mappingData);
+  showScreen('screen-drawer');
+}
+
+async function loadSavedReport(id) {
+  const saved = loadFromStorage();
+  if (!saved) return;
+
+  // Find the report in IDB
+  const reports = await idbGetReports(saved.storeName);
+  const report  = reports.find(r => r.id === id);
+  if (!report) { showToast('Report not found — please upload again'); showScreen('screen-home'); return; }
+
+  showScreen('screen-processing');
+  setStep('Loading saved report…', 30);
+  document.getElementById('processing-store').textContent = saved.storeName;
+
+  try {
+    await delay(100);
+    setStep('Running analysis…', 60);
+
+    // Restore Date objects (IDB serialises them as strings)
+    const rows = report.transactions.map(r => ({
+      ...r,
+      transaction_date: r.transaction_date ? new Date(r.transaction_date) : null,
+    }));
+
+    const analysisResults = Analysis.runAll(rows, Ingestion.JEWELLERY_CONFIG, saved.mappingData.mapping);
+
+    setStep('Building report…', 85);
+    await delay(100);
+
+    const period = fmtPeriod(report.periodStart, report.periodEnd);
+
+    setStep('Done ✓', 100);
+    await delay(80);
+    showScreen('screen-report');
+    await delay(50);
+
+    Renderer.render(analysisResults, saved.storeName, period, 'mapped');
+    DateFilter.init(rows, saved);
+
+  } catch(err) {
+    console.error(err);
+    showError('Could not load saved report. Try uploading the file again.\n\n' + err.message);
+  }
+}
+
+async function deleteDrawerReport(id) {
+  await idbDeleteReport(id);
+  const saved = loadFromStorage();
+  if (saved) initDrawerScreen(saved.storeName, saved.mappingData);
+}

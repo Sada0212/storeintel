@@ -191,6 +191,33 @@
 
   </div>
 
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCREEN 7 — REPORT DRAWER (recent reports)
+       Shows last 3 saved reports for this store on app open
+  ══════════════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-drawer">
+
+    <div class="drawer-header">
+      <div class="drawer-header-store" id="drawer-store-name"></div>
+      <div class="drawer-header-sub">Recent reports</div>
+    </div>
+
+    <div class="drawer-report-list" id="drawer-report-list">
+      <!-- populated by JS -->
+    </div>
+
+    <div class="drawer-actions">
+      <button class="btn btn-primary" id="btn-drawer-upload">
+        ＋ Upload new POS file
+      </button>
+      <button class="btn btn-ghost mt-8" id="btn-drawer-change-store">
+        Change store
+      </button>
+    </div>
+
+  </div>
+
   <!-- ══════════════════════════════════════════════════════════
        SCREEN 4 — PROCESSING
   ══════════════════════════════════════════════════════════ -->
@@ -287,7 +314,7 @@
     </div>
 
     <!-- Branding footer -->
-    <div class="brand-footer">Powered by <strong>StoreIntel</strong> · Your data never leaves this device · <span style="opacity:0.5">v44</span></div>
+    <div class="brand-footer">Powered by <strong>StoreIntel</strong> · Your data never leaves this device · <span style="opacity:0.5">v45</span></div>
 
   </div>
 
