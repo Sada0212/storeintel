@@ -377,7 +377,7 @@ async function startGenerate() {
     await delay(150);
 
     // Period string
-    const allDates = result.rows.map(r => r.transaction_date).filter(Boolean).sort();
+    const allDates = result.rows.map(r => r.transaction_date_str).filter(Boolean).sort();
     const period   = allDates.length
       ? fmtDate(allDates[0]) + ' – ' + fmtDate(allDates[allDates.length - 1])
       : 'Unknown period';
@@ -390,6 +390,10 @@ async function startGenerate() {
 
     Renderer.render(analysisResults, saved.storeName, period, result.confidence);
 
+    // v40: initialise date filter with raw transaction rows
+    // DateFilter stores rows in window.__SI_TRANSACTIONS__ and builds chip bar
+    DateFilter.init(result.rows, saved);
+
   } catch(err) {
     console.error(err);
     showError(err.message || 'Could not process your POS file. Check the file is correct.');
@@ -401,7 +405,7 @@ function buildReport(result, storeName) {
   const rows  = result.rows;
   const sales = rows.filter(r => r.is_sale !== false);
 
-  const dates  = sales.map(r => r.transaction_date).filter(Boolean).sort();
+  const dates  = sales.map(r => r.transaction_date_str).filter(Boolean).sort();
   const period = dates.length
     ? fmtDate(dates[0]) + ' – ' + fmtDate(dates[dates.length - 1])
     : 'Unknown period';

@@ -334,7 +334,8 @@ function normalise(rows, config) {
     // ── Date
     const parsedDate = parseDate(row.transaction_date);
     if (!parsedDate) continue; // drop rows with no date
-    out.transaction_date = parsedDate.dateStr;   // 'YYYY-MM-DD'
+    out.transaction_date = new Date(parsedDate.dateStr + 'T00:00:00'); // JS Date object (required for date filter)
+    out.transaction_date_str = parsedDate.dateStr; // 'YYYY-MM-DD' kept for display/sorting
     out.transaction_hour = parsedDate.hour;       // 0-23 or null
 
     // ── Time: use pre-computed raw hour (bypasses mapping gaps entirely)

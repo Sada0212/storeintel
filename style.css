@@ -1279,3 +1279,89 @@ html, body {
   background: var(--navy-light) !important;
   box-shadow: 0 0 0 2px var(--amber);
 }
+
+/* ── v40: Date Filter Bar ─────────────────────────────────────── */
+#siFilterBarMount:empty { display:none; }
+
+.si-filter-bar {
+  background: #0f1b2d;
+  border-bottom: 2px solid #c9973a;
+  padding: 10px 14px 8px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+
+.si-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.si-filter-row:last-of-type { margin-bottom: 0; }
+
+.si-filter-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #c9973a;
+  white-space: nowrap;
+  min-width: 40px;
+}
+
+.si-chip-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.si-chip-scroll::-webkit-scrollbar { display: none; }
+
+.si-chip {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(201,151,58,0.35);
+  background: transparent;
+  color: #8899aa;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.si-chip:active { transform: scale(0.96); }
+.si-chip-active {
+  background: #c9973a;
+  border-color: #c9973a;
+  color: #0f1b2d;
+  font-weight: 700;
+}
+
+.si-filter-active {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(201,151,58,0.12);
+  border-radius: 6px;
+  border: 1px solid rgba(201,151,58,0.3);
+}
+#siFilterBadge { font-size: 12px; color: #c9973a; font-weight: 600; }
+.si-filter-clear {
+  background: none;
+  border: none;
+  color: #667788;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.si-filter-clear:active { color: #c9973a; }

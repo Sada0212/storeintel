@@ -1,7 +1,7 @@
 /* StoreIntel Service Worker v1.0
    Caches everything on first load. App runs 100% offline after. */
 
-const CACHE_NAME = 'storeintel-v38';
+const CACHE_NAME = 'storeintel-v40';
 
 // All files to cache on install
 const BASE = '/storeintel';
@@ -17,6 +17,7 @@ const PRECACHE_URLS = [
   BASE + '/engine/ingestion.js',
   BASE + '/engine/analysis.js',
   BASE + '/engine/renderer.js',
+  BASE + '/engine/date_filter.js',
   BASE + '/libs/xlsx.full.min.js',
 ];
 

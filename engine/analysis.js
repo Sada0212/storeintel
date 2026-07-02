@@ -54,7 +54,7 @@ const Analysis = (() => {
     const avgPiecesPerBill = cmTxns ? round2(totalPieces / cmTxns) : 0;
     const totalWt   = sum(sales, 'weight');
 
-    const dates  = sales.map(r => r.transaction_date).filter(Boolean).sort();
+    const dates  = sales.map(r => r.transaction_date_str).filter(Boolean).sort();
     const dateMin = dates[0] || null;
     const dateMax = dates[dates.length - 1] || null;
 
@@ -248,9 +248,9 @@ const Analysis = (() => {
 
     const weekMap = {};
     for (const r of sales) {
-      const { year, week } = getISOWeek(r.transaction_date);
+      const { year, week } = getISOWeek(r.transaction_date_str);
       const key  = `${year}-${String(week).padStart(2,'0')}`;
-      const wkStart = getWeekStart(r.transaction_date);
+      const wkStart = getWeekStart(r.transaction_date_str);
       if (!weekMap[key]) weekMap[key] = { year, week, wkStart, rows: [] };
       weekMap[key].rows.push(r);
     }
@@ -334,7 +334,7 @@ const Analysis = (() => {
       .sort((a, b) => (parseFloat(b.gross_value) || 0) - (parseFloat(a.gross_value) || 0))
       .slice(0, 10)
       .map(r => ({
-        date:          r.transaction_date,
+        date:          r.transaction_date_str,
         customer_name: r.customer_name,
         staff_name:    r.staff_name,
         category:      r.category_l1,
@@ -424,7 +424,7 @@ const RFM = (() => {
   function purchasePattern(txns, refDateStr) {
     const refDate = new Date(refDateStr);
     const sorted  = [...txns].sort((a, b) => a.transaction_date.localeCompare(b.transaction_date));
-    const lastDate = new Date(sorted[sorted.length - 1].transaction_date);
+    const lastDate = new Date(sorted[sorted.length - 1].transaction_date_str);
     const daysSinceLast = Math.round((refDate - lastDate) / 86400000);
     const avgSpend = txns.reduce((s, r) => s + (parseFloat(r.gross_value)||0), 0) / txns.length;
     const lastSpend = parseFloat(sorted[sorted.length-1].gross_value) || 0;
@@ -442,8 +442,8 @@ const RFM = (() => {
     // Intervals between purchases in days
     const intervals = [];
     for (let i = 1; i < sorted.length; i++) {
-      const a = new Date(sorted[i-1].transaction_date);
-      const b = new Date(sorted[i].transaction_date);
+      const a = new Date(sorted[i-1].transaction_date_str);
+      const b = new Date(sorted[i].transaction_date_str);
       intervals.push((b - a) / 86400000);
     }
     const avgInterval = intervals.reduce((s, v) => s + v, 0) / intervals.length;
@@ -623,7 +623,7 @@ const RFM = (() => {
     if (!custNames.length) return { available: false, reason: 'No named customers' };
 
     // Reference date = latest transaction date
-    const allDates = sales.map(r => r.transaction_date).filter(Boolean).sort();
+    const allDates = sales.map(r => r.transaction_date_str).filter(Boolean).sort();
     const refDate  = allDates[allDates.length - 1];
 
     // Build per-customer metrics
@@ -631,7 +631,7 @@ const RFM = (() => {
       const txns      = custMap[name];
       const monetary  = txns.reduce((s, r) => s + (parseFloat(r.gross_value)||0), 0);
       const frequency = txns.length;
-      const lastDate  = txns.map(r => r.transaction_date).filter(Boolean).sort().pop();
+      const lastDate  = txns.map(r => r.transaction_date_str).filter(Boolean).sort().pop();
       const recencyDays = lastDate
         ? Math.round((new Date(refDate) - new Date(lastDate)) / 86400000)
         : 999;
@@ -829,7 +829,7 @@ const AnalysisExtended = (() => {
       .sort((a,b) => toNum(b.gross_value) - toNum(a.gross_value))
       .slice(0, 10)
       .map(r => ({
-        date:          r.transaction_date,
+        date:          r.transaction_date_str,
         customer_name: r.customer_name,
         staff_name:    r.staff_name,
         category:      r.category_l1,
@@ -1017,7 +1017,7 @@ const AnalysisExtended = (() => {
     const sales = rows.filter(r => r.is_sale !== false && r.transaction_date);
     const qtrs  = {};
     for (const r of sales) {
-      const [y, m] = r.transaction_date.split('-');
+      const [y, m] = r.transaction_date_str.split('-');
       const q = Math.ceil(parseInt(m) / 3);
       const key = `${y}-Q${q}`;
       if (!qtrs[key]) qtrs[key] = { key, label:`Q${q} ${y}`, rows:[] };
@@ -1036,7 +1036,7 @@ const AnalysisExtended = (() => {
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const byMonth = {};
     for (const r of sales) {
-      const m = parseInt(r.transaction_date.split('-')[1]) - 1;
+      const m = parseInt(r.transaction_date_str.split('-')[1]) - 1;
       const name = MONTHS[m];
       if (!byMonth[name]) byMonth[name] = { label:name, months:0, ucp:0, txns:0 };
       byMonth[name].ucp  += toNum(r.gross_value);
@@ -1046,7 +1046,7 @@ const AnalysisExtended = (() => {
     // Count distinct year-months per month name for averaging
     const ymByName = {};
     for (const r of sales) {
-      const parts = r.transaction_date.split('-');
+      const parts = r.transaction_date_str.split('-');
       const name  = MONTHS[parseInt(parts[1])-1];
       const ym    = `${parts[0]}-${parts[1]}`;
       if (!ymByName[name]) ymByName[name] = new Set();
@@ -1063,11 +1063,11 @@ const AnalysisExtended = (() => {
   function monthlyTrend(rows) {
     const sales = rows.filter(r => r.is_sale !== false && r.transaction_date);
     console.log('[Trends] total sales for monthly:', sales.length,
-      '| sample dates:', sales.slice(0,3).map(r=>r.transaction_date));
+      '| sample dates:', sales.slice(0,3).map(r=>r.transaction_date_str));
     const months = {};
     const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     for (const r of sales) {
-      const [y,m] = r.transaction_date.split('-');
+      const [y,m] = r.transaction_date_str.split('-');
       const key   = `${y}-${m}`;
       if (!months[key]) months[key] = { key, label:`${MONTH_NAMES[parseInt(m)-1]} ${y}`, rows:[] };
       months[key].rows.push(r);
