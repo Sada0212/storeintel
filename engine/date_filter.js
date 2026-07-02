@@ -121,7 +121,7 @@ function buildOptions(rows) {
   }
 
   // Sort chips chronologically
-  chips.sort((a,b) => a.start - b.start);
+  chips.sort((a,b) => b.start - a.start);
 
   return { mode, chips, span };
 }
