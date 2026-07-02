@@ -42,6 +42,7 @@ const MAX_REPORTS = 3;
 
 function openIDB() {
   return new Promise((res, rej) => {
+    if (!window.indexedDB) { rej(new Error('IndexedDB not supported')); return; }
     const req = indexedDB.open(IDB_NAME, IDB_VERSION);
     req.onupgradeneeded = e => {
       const db = e.target.result;
@@ -52,7 +53,8 @@ function openIDB() {
       }
     };
     req.onsuccess = e => res(e.target.result);
-    req.onerror   = e => rej(e.target.error);
+    req.onerror   = e => { console.warn('[IDB] open error', e.target.error); rej(e.target.error); };
+    req.onblocked = () => { console.warn('[IDB] blocked'); rej(new Error('IDB blocked')); };
   });
 }
 
@@ -508,8 +510,11 @@ async function startGenerate() {
 
     // v45: auto-save report to IndexedDB
     idbSaveReport(saved.storeName, state.posFileName, result.rows)
-      .then(ok => { if (ok) showToast('Report saved ✓'); })
-      .catch(e => { console.warn('[IDB] save error:', e); });
+      .then(ok => {
+        if (ok) showToast('Report saved ✓');
+        else showToast('⚠ Report not saved (storage full?)');
+      })
+      .catch(e => { showToast('⚠ Save failed: ' + (e && e.message || e)); });
 
   } catch(err) {
     console.error(err);
@@ -782,13 +787,17 @@ function fmtSavedAt(iso) {
 }
 
 async function initDrawerScreen(storeName, mappingData) {
-  const reports = await idbGetReports(storeName);
-  const drawerEl = document.getElementById('screen-drawer');
+  let reports = [];
+  try {
+    reports = await idbGetReports(storeName);
+  } catch(e) {
+    showToast('⚠ Could not load history: ' + (e && e.message || e));
+    showScreen('screen-home');
+    return;
+  }
 
   if (!reports.length) {
-    // No saved reports — go straight to home
-    loadHomeScreen(storeName, mappingData);
-    showScreen('screen-home');
+    // No saved reports — stay on home screen (already shown)
     return;
   }
 
