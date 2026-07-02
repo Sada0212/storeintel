@@ -840,6 +840,20 @@ async function initDrawerScreen(storeName, mappingData) {
   `).join('');
 
   document.getElementById('drawer-store-name').textContent = storeName;
+
+  // Clear any stale report screen content so nothing bleeds through
+  document.getElementById('kpi-zone').innerHTML         = '';
+  document.getElementById('report-badge').innerHTML     = '';
+  document.getElementById('report-store').textContent   = '';
+  document.getElementById('report-period').textContent  = '';
+  const fm = document.getElementById('siFilterBarMount');
+  if (fm) fm.innerHTML = '';
+  ['tab-insights','tab-category-content','tab-staff-content',
+   'tab-discount-content','tab-customers-content','tab-action-content',
+   'tab-trends-content'].forEach(id => {
+     const el = document.getElementById(id); if(el) el.innerHTML='';
+  });
+
   loadHomeScreen(storeName, mappingData);
   showScreen('screen-drawer');
 }
