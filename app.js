@@ -181,6 +181,18 @@ function showScreen(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
   window.scrollTo(0, 0);
+
+  // Hard guard: explicitly hide report-only chrome on every non-report screen
+  // This survives any service worker caching issues
+  const onReport = (id === 'screen-report');
+  const rptHeader = document.querySelector('.rpt-header');
+  const tabBar    = document.querySelector('.tab-bar');
+  const brandFoot = document.querySelector('.brand-footer');
+  const filterMnt = document.getElementById('siFilterBarMount');
+  if (rptHeader) rptHeader.style.display = onReport ? '' : 'none';
+  if (tabBar)    tabBar.style.display    = onReport ? '' : 'none';
+  if (brandFoot) brandFoot.style.display = onReport ? '' : 'none';
+  if (filterMnt) filterMnt.style.display = onReport ? '' : 'none';
 }
 
 // ── NETWORK STATUS ────────────────────────────────────────────────
