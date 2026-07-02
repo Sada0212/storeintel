@@ -191,8 +191,8 @@ function showScreen(id) {
   const filterMnt = document.getElementById('siFilterBarMount');
   if (rptHeader) rptHeader.style.display = onReport ? '' : 'none';
   if (tabBar)    tabBar.style.display    = onReport ? '' : 'none';
-  if (brandFoot) brandFoot.style.display = onReport ? '' : 'none';
   if (filterMnt) filterMnt.style.display = onReport ? '' : 'none';
+  // brand-footer shows on ALL screens — never hidden
 }
 
 // ── NETWORK STATUS ────────────────────────────────────────────────
