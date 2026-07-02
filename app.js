@@ -107,8 +107,19 @@ async function idbSaveReport(storeName, fileName, rows) {
       transactions: serialisedRows,
     };
 
-    // Enforce MAX_REPORTS per store — delete oldest if at cap
+    // Deduplicate — skip if same filename + same period already saved
     const existing = await idbGetReports(storeName);
+    const alreadySaved = existing.some(r =>
+      r.fileName === fileName &&
+      r.periodStart === record.periodStart &&
+      r.periodEnd   === record.periodEnd
+    );
+    if (alreadySaved) {
+      console.log('[IDB] duplicate — skipping save');
+      return true; // treat as success, just don't duplicate
+    }
+
+    // Enforce MAX_REPORTS per store — delete oldest if at cap
     if (existing.length >= MAX_REPORTS) {
       const toDelete = existing.slice(MAX_REPORTS - 1);
       await Promise.all(toDelete.map(r => idbDeleteReport(r.id)));
@@ -454,7 +465,15 @@ function initHomeScreen() {
     const filterMount = document.getElementById('siFilterBarMount');
     if (filterMount) filterMount.innerHTML = '';
 
-    showScreen('screen-home');
+    // v48: go to drawer if saved reports exist, else home
+    const savedForNew = loadFromStorage();
+    if (savedForNew) {
+      loadHomeScreen(savedForNew.storeName, savedForNew.mappingData);
+      showScreen('screen-home');
+      initDrawerScreen(savedForNew.storeName, savedForNew.mappingData);
+    } else {
+      showScreen('screen-home');
+    }
   });
 }
 
@@ -813,7 +832,10 @@ async function initDrawerScreen(storeName, mappingData) {
         </div>
         <div class="drawer-card-file">${r.fileName || ''}</div>
       </div>
-      <button class="drawer-card-open" onclick="loadSavedReport(${r.id})">Open</button>
+      <div class="drawer-card-actions">
+        <button class="drawer-card-open" onclick="loadSavedReport(${r.id})">Open</button>
+        <button class="drawer-card-delete" onclick="confirmDeleteReport(${r.id})" title="Delete">✕</button>
+      </div>
     </div>
   `).join('');
 
@@ -863,6 +885,22 @@ async function loadSavedReport(id) {
   } catch(err) {
     console.error(err);
     showError('Could not load saved report. Try uploading the file again.\n\n' + err.message);
+  }
+}
+
+async function confirmDeleteReport(id) {
+  if (!confirm('Delete this saved report?')) return;
+  await idbDeleteReport(id);
+  const saved = loadFromStorage();
+  if (saved) {
+    const remaining = await idbGetReports(saved.storeName);
+    if (remaining.length === 0) {
+      // No reports left — go to home
+      loadHomeScreen(saved.storeName, saved.mappingData);
+      showScreen('screen-home');
+    } else {
+      initDrawerScreen(saved.storeName, saved.mappingData);
+    }
   }
 }
 

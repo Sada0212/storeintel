@@ -1547,8 +1547,14 @@ html, body {
   text-overflow: ellipsis;
 }
 
-.drawer-card-open {
+.drawer-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   flex-shrink: 0;
+}
+
+.drawer-card-open {
   padding: 8px 16px;
   background: #c9973a;
   color: #0f1b2d;
@@ -1561,6 +1567,20 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 .drawer-card-open:active { opacity: 0.82; transform: scale(0.97); }
+
+.drawer-card-delete {
+  padding: 5px 10px;
+  background: transparent;
+  color: #7a9ab5;
+  font-size: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.drawer-card-delete:active { color: #e57373; border-color: #e57373; }
 
 .drawer-actions {
   padding: 8px 16px 32px;
