@@ -331,13 +331,18 @@ function initHomeScreen() {
     posNameEl.classList.add('hidden');
     genBtn.disabled = true;
 
-    // Clear old report sections and reset tabs
-    resetTabs();
+    // Clear old report sections and reset to summary tab
+    Renderer.switchTab('tab-summary');
     document.getElementById('kpi-zone').innerHTML = '';
     document.getElementById('report-badge').innerHTML = '';
     ['tab-insights','tab-category-content','tab-staff-content',
-     'tab-discount-content','tab-customers-content','tab-action-content']
+     'tab-discount-content','tab-customers-content','tab-action-content',
+     'tab-trends-content']
       .forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML=''; });
+
+    // Clear filter bar
+    const filterMount = document.getElementById('siFilterBarMount');
+    if (filterMount) filterMount.innerHTML = '';
 
     showScreen('screen-home');
   });
