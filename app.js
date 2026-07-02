@@ -75,44 +75,55 @@ async function idbGetReports(storeName) {
   } catch(e) { console.warn('[IDB] getReports failed', e); return []; }
 }
 
-async function idbSaveReport(storeName, fileName, rows, analysisResults) {
+async function idbSaveReport(storeName, fileName, rows) {
   try {
     const db = await openIDB();
-    // Compute summary for the card display
+
+    // Compute summary for drawer card display
     const sales = rows.filter(r => r.is_sale !== false);
     const dates = rows.map(r => r.transaction_date_str).filter(Boolean).sort();
     const gross = sales.reduce((s,r) => s + (parseFloat(r.gross_value)||0), 0);
     const bills = new Set(sales.map(r => r.invoice_number).filter(Boolean)).size || sales.length;
 
+    // Serialise rows: convert Date objects to ISO strings so IDB stores cleanly
+    const serialisedRows = rows.map(r => ({
+      ...r,
+      transaction_date: r.transaction_date instanceof Date
+        ? r.transaction_date.toISOString()
+        : (r.transaction_date || null),
+    }));
+
     const record = {
       storeName,
       fileName,
-      savedAt:     new Date().toISOString(),
-      periodStart: dates[0]  || '',
-      periodEnd:   dates[dates.length-1] || '',
-      txnCount:    sales.length,
-      billCount:   bills,
-      grossTotal:  gross,
-      transactions: rows,   // full parsed array
+      savedAt:      new Date().toISOString(),
+      periodStart:  dates[0] || '',
+      periodEnd:    dates[dates.length - 1] || '',
+      txnCount:     sales.length,
+      billCount:    bills,
+      grossTotal:   gross,
+      transactions: serialisedRows,
     };
 
-    return new Promise(async (res, rej) => {
-      // Enforce MAX_REPORTS per store — delete oldest if needed
-      const existing = await idbGetReports(storeName);
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      const os = tx.objectStore(IDB_STORE);
+    // Enforce MAX_REPORTS per store — delete oldest if at cap
+    const existing = await idbGetReports(storeName);
+    if (existing.length >= MAX_REPORTS) {
+      const toDelete = existing.slice(MAX_REPORTS - 1);
+      await Promise.all(toDelete.map(r => idbDeleteReport(r.id)));
+    }
 
-      if (existing.length >= MAX_REPORTS) {
-        // Delete oldest (last in sorted array)
-        const toDelete = existing.slice(MAX_REPORTS - 1);
-        toDelete.forEach(r => os.delete(r.id));
-      }
-
-      const addReq = os.add(record);
-      addReq.onsuccess = () => res(true);
-      addReq.onerror   = () => rej(addReq.error);
+    // Write new record
+    return new Promise((res, rej) => {
+      const tx     = db.transaction(IDB_STORE, 'readwrite');
+      const addReq = tx.objectStore(IDB_STORE).add(record);
+      addReq.onsuccess = () => { console.log('[IDB] report saved'); res(true); };
+      addReq.onerror   = () => { console.warn('[IDB] add failed', addReq.error); rej(addReq.error); };
     });
-  } catch(e) { console.warn('[IDB] saveReport failed', e); return false; }
+
+  } catch(e) {
+    console.warn('[IDB] saveReport failed:', e);
+    return false;
+  }
 }
 
 async function idbDeleteReport(id) {
@@ -496,9 +507,9 @@ async function startGenerate() {
     DateFilter.init(result.rows, saved);
 
     // v45: auto-save report to IndexedDB
-    idbSaveReport(saved.storeName, state.posFileName, result.rows, analysisResults)
+    idbSaveReport(saved.storeName, state.posFileName, result.rows)
       .then(ok => { if (ok) showToast('Report saved ✓'); })
-      .catch(() => {});
+      .catch(e => { console.warn('[IDB] save error:', e); });
 
   } catch(err) {
     console.error(err);
@@ -734,8 +745,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (saved) {
     state.storeName = saved.storeName;
     loadHomeScreen(saved.storeName, saved.mappingData);
-    // Show drawer if saved reports exist
-    initDrawerScreen(saved.storeName, saved.mappingData);
+    showScreen('screen-home'); // show immediately — drawer will replace if records exist
+    initDrawerScreen(saved.storeName, saved.mappingData); // async — switches to drawer if found
   } else {
     showScreen('screen-setup');
   }
