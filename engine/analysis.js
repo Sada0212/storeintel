@@ -423,7 +423,7 @@ const RFM = (() => {
   // ── PURCHASE PATTERN ─────────────────────────────────────────
   function purchasePattern(txns, refDateStr) {
     const refDate = new Date(refDateStr);
-    const sorted  = [...txns].sort((a, b) => a.transaction_date.localeCompare(b.transaction_date));
+    const sorted  = [...txns].sort((a, b) => a.transaction_date_str.localeCompare(b.transaction_date_str));
     const lastDate = new Date(sorted[sorted.length - 1].transaction_date_str);
     const daysSinceLast = Math.round((refDate - lastDate) / 86400000);
     const avgSpend = txns.reduce((s, r) => s + (parseFloat(r.gross_value)||0), 0) / txns.length;
