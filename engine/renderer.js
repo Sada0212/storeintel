@@ -1,6 +1,7 @@
-/* StoreIntel — renderer.js v4 (PWA v52)
+/* StoreIntel — renderer.js v4 (PWA v53)
    All tabs, all sections, clickable action modal.
    v52: Cu4 note added (full-period only, B5 fixed in date_filter.js)
+   v53: T1 Annual FY table + YoY callout + Churn alert banner
 */
 'use strict';
 
@@ -359,16 +360,57 @@ function renderCustomers(R) {
 // ── TAB 6: TRENDS ───────────────────────────────────────────────────
 function renderTrends(R) {
   const ex      = R.extended||{};
-  console.log('[Trends] monthly:', (ex.monthly_trend||[]).length,
-    '| quarterly:', (ex.quarterly_trend||[]).length,
-    '| seasonality:', (ex.seasonality||[]).length,
-    '| weekly:', (R.weekly||[]).length,
-    '| monthly sample:', (ex.monthly_trend||[]).slice(0,3).map(m=>m.label+':'+m.ucp));
   const weekly  = R.weekly||[];
   const monthly = ex.monthly_trend||[];
   const qtrs    = ex.quarterly_trend||[];
   const season  = ex.seasonality||[];
+  const fyAnnual = ex.fy_annual||[];
   let html = '';
+
+  // T1 Annual FY Summary — always full-period, shown first as strategic anchor.
+  // Even with 1 FY of data it's useful; YoY callout only fires with 2+ FYs.
+  if (fyAnnual.length >= 1) {
+    const maxG = Math.max(...fyAnnual.map(f=>f.gross), 1);
+    html += sec('T1 — Annual Summary by Financial Year',
+      fyAnnual.map(f => {
+        const yoyBadge = f.yoy_gross_pct != null
+          ? `<span style="color:${f.yoy_gross_pct>=0?'var(--green)':'var(--red)'};font-weight:700;margin-left:6px">${f.yoy_gross_pct>=0?'▲':'▼'}${Math.abs(f.yoy_gross_pct)}% YoY</span>`
+          : '';
+        return rrow(
+          f.label + yoyBadge,
+          fI(f.gross),
+          bar(f.gross, maxG),
+          `<span>${num(f.bills)} bills</span><span>${fI(f.avg_txn)} avg</span><span>${f.customers} custs</span><span style="color:${dc(f.disc_pct)}">${pct(f.disc_pct)} disc</span>`,
+          'var(--amber)'
+        );
+      }).join('')
+    );
+
+    // YoY callout — only when 2+ FYs available
+    if (fyAnnual.length >= 2) {
+      const curr = fyAnnual[fyAnnual.length - 1];
+      const prev = fyAnnual[fyAnnual.length - 2];
+      const g = curr.yoy_gross_pct;
+      const b = curr.yoy_bills_pct;
+      if (g != null) {
+        const growthType = g >= 15 ? 'good' : g >= 0 ? '' : 'warn';
+        const growthMsg  = g >= 15
+          ? `✅ Strong growth — ${curr.label} gross revenue up ${g}% vs ${prev.label}`
+          : g >= 0
+          ? `📊 Modest growth — ${curr.label} up ${g}% vs ${prev.label}. Room to accelerate.`
+          : `⚠️ Revenue declined ${Math.abs(g)}% vs ${prev.label} — worth investigating the mix shift.`;
+        html += insight(growthMsg, growthType);
+        if (b != null) {
+          const billMsg = b >= 0
+            ? `📋 Bills also up ${b}% — growth is volume-led`
+            : `📋 Bills down ${Math.abs(b)}% despite revenue — avg ticket is carrying the number`;
+          html += insight(billMsg);
+        }
+      }
+    } else {
+      html += insight('ℹ️ Upload a second year of data to see year-over-year comparison.');
+    }
+  }
 
   // T4 Monthly — show even for 1 month, compare callouts only for 2+
   if (monthly.length >= 1) {
@@ -496,7 +538,36 @@ function renderAction(rfm) {
   const totalCusts = (rfm.customers||[]).length;
   const cards = (rfm.customers||[]).map((c,idx)=>makeCard(c,idx)).join('');
 
-  return `<div class="seg-pills" id="seg-pills-grid">${pills}</div>` +
+  // v53: Churn alert banner — surfaces CRITICAL+HIGH risk customers prominently
+  // above the segment grid. These are the customers the owner needs to act on today.
+  // Pulled from full-period RFM (never filtered) so it's always the real picture.
+  let churnBanner = '';
+  if (atRisk > 0) {
+    const criticals = (rfm.customers||[]).filter(c=>c.risk_level==='CRITICAL');
+    const highs     = (rfm.customers||[]).filter(c=>c.risk_level==='HIGH');
+    const critHV    = criticals.filter(c=>c.monetary>=(rfm.hv_threshold||100000));
+    let bannerLines = '';
+    if (criticals.length) {
+      const names = criticals.slice(0,3).map(c=>c.customer_name).join(', ');
+      const more  = criticals.length > 3 ? ` +${criticals.length-3} more` : '';
+      bannerLines += `<div style="margin-top:6px;font-size:12px"><strong style="color:#ff6b6b">🚨 ${criticals.length} CRITICAL:</strong> ${names}${more}</div>`;
+    }
+    if (highs.length) {
+      const names = highs.slice(0,3).map(c=>c.customer_name).join(', ');
+      const more  = highs.length > 3 ? ` +${highs.length-3} more` : '';
+      bannerLines += `<div style="margin-top:4px;font-size:12px"><strong style="color:#ffb347">⚠️ ${highs.length} HIGH risk:</strong> ${names}${more}</div>`;
+    }
+    churnBanner = `<div style="background:#1a0a0a;border:1px solid #c0392b;border-radius:10px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#ff6b6b;letter-spacing:.3px">
+        ${atRisk} customer${atRisk!==1?'s':''} at risk of churning
+        ${critHV.length?`<span style="font-size:11px;font-weight:400;color:#ffb347;margin-left:8px">— ${critHV.length} high-value</span>`:''}
+      </div>
+      ${bannerLines}
+      <div style="margin-top:8px;font-size:11px;color:var(--grey)">Tap a customer card below to get their recommended action message.</div>
+    </div>`;
+  }
+
+  return churnBanner + `<div class="seg-pills" id="seg-pills-grid">${pills}</div>` +
     `<div class="action-filter-bar">
        <span class="action-filter-label" id="action-filter-label">All ${totalCusts} customers — tap a tile to filter</span>
        <button class="action-filter-clear hidden" id="action-filter-clear">Clear filter ✕</button>

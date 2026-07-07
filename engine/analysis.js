@@ -1082,6 +1082,57 @@ const AnalysisExtended = (() => {
   }
 
   // ── RUN ALL EXTENDED ─────────────────────────────────────────
+
+  // ── T1 FY ANNUAL SUMMARY ─────────────────────────────────────
+  // Groups transactions by Indian Financial Year (Apr 1 → Mar 31).
+  // Used in Trends tab as the top-level strategic view.
+  // Always full-period — slicing by date chip would break FY completeness.
+  function fyAnnualSummary(rows) {
+    const sales = rows.filter(r => r.is_sale !== false && r.transaction_date_str);
+    if (!sales.length) return [];
+
+    // Indian FY: Apr = month 4 onwards belongs to FY starting that year
+    function getFY(dateStr) {
+      const [y, m] = dateStr.split('-').map(Number);
+      return m >= 4 ? y : y - 1;
+    }
+    function fyLabel(s) { return `FY ${s}-${String(s+1).slice(2)}`; }
+
+    const fyMap = {};
+    for (const r of sales) {
+      const fy  = getFY(r.transaction_date_str);
+      const key = fyLabel(fy);
+      if (!fyMap[key]) fyMap[key] = { key, fyStart: fy, label: key, rows: [] };
+      fyMap[key].rows.push(r);
+    }
+
+    const result = Object.values(fyMap)
+      .sort((a, b) => a.fyStart - b.fyStart)
+      .map(({ label, rows: grp }) => {
+        const gross   = sum(grp, 'gross_value');
+        const retRows = grp.filter(r => r.is_sale === false);
+        const ret     = sum(retRows, 'gross_value');
+        const net     = gross + ret;
+        const bills   = new Set(grp.filter(r=>r.is_sale!==false).map(r=>r.invoice_number).filter(Boolean)).size || grp.filter(r=>r.is_sale!==false).length;
+        const custs   = new Set(grp.map(r=>r.customer_name).filter(n=>n&&n!=='Unknown')).size;
+        const disc    = sum(grp.filter(r=>r.is_sale!==false), 'discount_amount');
+        const discPct = gross > 0 ? Math.round(disc/gross*1000)/10 : 0;
+        const avgTxn  = bills > 0 ? Math.round(gross / bills) : 0;
+        return { label, gross: Math.round(gross), net: Math.round(net), ret: Math.round(ret),
+                 bills, customers: custs, avg_txn: avgTxn, disc_pct: discPct };
+      });
+
+    // Attach YoY deltas to each FY (vs previous FY)
+    for (let i = 1; i < result.length; i++) {
+      const prev = result[i-1], curr = result[i];
+      result[i].yoy_gross_pct = prev.gross > 0 ? Math.round((curr.gross - prev.gross)/prev.gross*1000)/10 : null;
+      result[i].yoy_net_pct   = prev.net   > 0 ? Math.round((curr.net   - prev.net  )/prev.net  *1000)/10 : null;
+      result[i].yoy_bills_pct = prev.bills > 0 ? Math.round((curr.bills - prev.bills)/prev.bills*1000)/10 : null;
+    }
+
+    return result;
+  }
+
   function runExtended(rows, config, mapping) {
     return {
       scorecard:      scorecard(rows, config),
@@ -1096,6 +1147,7 @@ const AnalysisExtended = (() => {
       seasonality:    seasonality(rows),
       store_metrics:  storeMetrics(rows, mapping),
       unlock_guide:   unlockGuide(rows, mapping),
+      fy_annual:      fyAnnualSummary(rows),
     };
   }
 
