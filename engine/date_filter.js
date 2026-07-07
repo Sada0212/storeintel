@@ -1,5 +1,5 @@
 /* StoreIntel — Date Filter Engine
-   v42 | 02 Jul 2026
+   v52 | 06 Jul 2026
 
    ADAPTIVE GRANULARITY:
      < 13 months  → show individual month chips
@@ -218,6 +218,25 @@ function rerender(filtered) {
   const saved = window.__SI_SAVED__;
   if (!saved) return;
   const R = Analysis.runAll(filtered, Ingestion.JEWELLERY_CONFIG, saved.mappingData.mapping);
+
+  // v52 B4: Action Center (RFM) must NEVER recalculate on a date filter.
+  // RFM scores (Recency/Frequency/Monetary) and customer segments are a
+  // function of the customer's ENTIRE history with the store.
+  // Filtering to H2 would make a 6-visit loyal customer appear as One-time.
+  // Solution: always use the full-period RFM from __SI_FULL_R__.
+  const fullR = window.__SI_FULL_R__;
+  if (fullR) {
+    R.rfm = fullR.rfm;
+
+    // v52 B5: Cu4 (Purchase Frequency bands) has the same problem.
+    // A customer who visited 6x over the year but 1x in the selected
+    // period is still a Regular — not a One-time buyer.
+    // Patch extended.frequency from the full-period result.
+    if (fullR.extended && R.extended) {
+      R.extended.frequency = fullR.extended.frequency;
+    }
+  }
+
   renderSummary(R);
   document.getElementById('tab-category-content').innerHTML  = renderCategory(R);
   document.getElementById('tab-staff-content').innerHTML     = renderStaff(R);
@@ -269,6 +288,12 @@ function init(rows, saved) {
   window.__SI_SAVED__        = saved;
   const opts = buildOptions(rows);
   window.__SI_FILTER_OPTS__  = opts;
+
+  // v52 B4+B5: Store full-period analysis results so RFM (Action Center)
+  // and Cu4 (Purchase Frequency) always reflect the FULL data period,
+  // not just the currently filtered slice.
+  // These are customer-loyalty metrics — filtering them misclassifies customers.
+  window.__SI_FULL_R__ = Analysis.runAll(rows, Ingestion.JEWELLERY_CONFIG, saved.mappingData.mapping);
 
   const mount = document.getElementById('siFilterBarMount');
   if (mount) mount.innerHTML = buildBarHTML(opts);

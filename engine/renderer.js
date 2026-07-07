@@ -1,5 +1,6 @@
-/* StoreIntel — renderer.js v4
+/* StoreIntel — renderer.js v4 (PWA v52)
    All tabs, all sections, clickable action modal.
+   v52: Cu4 note added (full-period only, B5 fixed in date_filter.js)
 */
 'use strict';
 
@@ -301,11 +302,17 @@ function renderCustomers(R) {
     );
   }
 
-  // Cu4 Frequency
+  // Cu4 Frequency — v52: intentionally full-period only (not filter-responsive).
+  // A customer who visited 6x over the year but 1x in a selected period
+  // is still a Regular — calling them One-time would be actively misleading.
   const freq = ex.frequency;
   if (freq && freq.available) {
     const maxCount = Math.max(...freq.bands.map(b=>b.count),1);
     const rs = freq.repeat_split;
+    const cu4Note = `<div style="margin-top:10px;padding:8px 10px;border-left:3px solid var(--amber);font-size:11px;color:var(--grey);line-height:1.5">
+      Frequency bands always reflect your full data period — a customer who visited 6× over the year
+      but only 1× in the selected period is still a Regular, not a One-time buyer.
+    </div>`;
     html += sec('Cu4 — Purchase Frequency',
       freq.bands.map(b=>rrow(b.label, `${b.count} customers`, bar(b.count,maxCount),
         `<span>${pct(b.cust_pct)} of base</span><span>${pct(b.rev_pct)} of revenue</span>`
@@ -320,7 +327,7 @@ function renderCustomers(R) {
             <div class="split-val" style="color:var(--green)">${pct(rs.repeat_revenue_pct)}</div>
             <div class="split-lbl">Repeat revenue<br>${rs.repeat_count} customers</div>
           </div>
-        </div>` : '')
+        </div>` : '') + cu4Note
     );
   }
 
