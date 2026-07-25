@@ -81,7 +81,7 @@
     </div>
 
     <!-- Step 3: Opportunity mapping (optional) -->
-    <div class="setup-step" id="opp-setup-step">
+    <div class="setup-step" id="opp-setup-step" style="overflow:hidden">
       <div class="setup-step-num" style="background:var(--teal,#1A7A7A)">3</div>
       <div class="setup-step-body">
         <div class="setup-step-title">
@@ -123,16 +123,35 @@
       <div class="review-subtitle">Column mapping — review before saving</div>
     </div>
 
-    <!-- Mandatory fields -->
-    <div class="review-section">
-      <div class="review-section-title">Required fields</div>
-      <div id="review-mandatory-rows"></div>
+    <!-- Tab switcher — Opp tab only shown if Opp mapping uploaded -->
+    <div class="mapping-review-tabs">
+      <button class="mr-tab active" id="mr-tab-pos"
+        onclick="switchMappingTab('pos')">📊 Sales</button>
+      <button class="mr-tab" id="mr-tab-opp"
+        onclick="switchMappingTab('opp')" style="display:none">
+        📋 Opportunity</button>
     </div>
 
-    <!-- Optional fields -->
-    <div class="review-section">
-      <div class="review-section-title">Optional fields</div>
-      <div id="review-optional-rows"></div>
+    <!-- POS mapping view -->
+    <div id="mr-view-pos">
+      <!-- Mandatory fields -->
+      <div class="review-section">
+        <div class="review-section-title">Required fields</div>
+        <div id="review-mandatory-rows"></div>
+      </div>
+      <!-- Optional fields -->
+      <div class="review-section">
+        <div class="review-section-title">Optional fields</div>
+        <div id="review-optional-rows"></div>
+      </div>
+    </div>
+
+    <!-- Opportunity mapping view (hidden until tab tapped) -->
+    <div id="mr-view-opp" style="display:none">
+      <div class="review-section">
+        <div class="review-section-title">Opportunity fields mapped</div>
+        <div id="review-opp-rows"></div>
+      </div>
     </div>
 
     <!-- Warning if mandatory fields missing -->
@@ -225,7 +244,7 @@
 
         <!-- NP file drop zone -->
         <div id="opp-drop-zone"
-          class="upload-zone small opp-drop-zone"
+          class="upload-zone small"
           onclick="document.getElementById('opp-file-input').click()"
           ondragover="event.preventDefault();this.classList.add('drag-over')"
           ondragleave="this.classList.remove('drag-over')"
@@ -320,7 +339,7 @@
       </div>
     </div>
 
-    <!-- Report toggle — only shown when both POS + Opportunity uploaded (v55) -->
+    <!-- Report toggle — below PDF/New, only when both uploaded (v55) -->
     <div id="report-toggle-bar" style="display:none">
       <button id="toggle-btn-pos" class="rpt-toggle-btn active"
         onclick="switchReportView('pos')">
@@ -328,7 +347,7 @@
       </button>
       <button id="toggle-btn-opp" class="rpt-toggle-btn"
         onclick="switchReportView('opp')">
-        📋 Opportunity Report
+        📋 Opportunity
       </button>
     </div>
 

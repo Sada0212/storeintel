@@ -373,6 +373,71 @@ function buildMappingReview(storeName, parsed) {
     warningEl.classList.add('hidden');
     confirmBtn.disabled = false;
   }
+
+  // v55: Show Opportunity mapping tab if Opp mapping was uploaded in setup
+  _buildOppMappingReview();
+}
+
+function _buildOppMappingReview() {
+  const oppTabBtn  = document.getElementById('mr-tab-opp');
+  const oppRowsEl  = document.getElementById('review-opp-rows');
+  if (!oppTabBtn || !oppRowsEl) return;
+
+  const saved = localStorage.getItem('si_opp_mapping_b64');
+  if (!saved) { oppTabBtn.style.display = 'none'; return; }
+
+  let tmpl = null;
+  try {
+    if (typeof parseOppMappingTemplate === 'function') {
+      tmpl = parseOppMappingTemplate(saved);
+    }
+  } catch(e) { oppTabBtn.style.display = 'none'; return; }
+
+  if (!tmpl || tmpl.filledCount === 0) { oppTabBtn.style.display = 'none'; return; }
+
+  // Show the tab
+  oppTabBtn.style.display = '';
+
+  // Field labels for Opp schema
+  const OPP_LABELS = {
+    np_date:              'Date',
+    np_salesperson:       'Salesperson / RSO',
+    np_reason:            'NP Reason',
+    np_category:          'Category',
+    np_value:             'Value',
+    np_customer_name:     'Customer Name',
+    np_mobile:            'Mobile',
+    np_customer_type:     'New / Old Customer',
+    np_occasion:          'Occasion',
+    np_gender:            'Gender',
+    np_product_shown:     'Product Available',
+    np_alternate_offered: 'Endless Aisle',
+    np_team:              'Team',
+    np_remarks:           'Remarks',
+    np_karat:             'Karat',
+    np_gold_rate:         'Gold Rate',
+    np_weight_g:          'Weight (g)',
+    np_cluster:           'Cluster',
+    np_amc_pct:           'AMC %',
+    np_size:              'Size / Length',
+    np_dia_carat:         'Dia Carat',
+    np_attended_by:       'Attended By',
+    np_design_req:        'Design Request',
+    np_quantity:          'Quantity',
+  };
+
+  const mapping = tmpl.mapping || {};
+  const rows = Object.entries(OPP_LABELS).map(([field, label]) => {
+    const col   = mapping[field];
+    const found = !!col;
+    return `<div class="review-row">
+      <span class="review-row-icon">${found ? '✅' : '<span style="opacity:0.3">○</span>'}</span>
+      <span class="review-row-field">${label}</span>
+      <span class="review-row-col ${found ? '' : 'not-found'}">${col || 'not mapped'}</span>
+    </div>`;
+  });
+
+  oppRowsEl.innerHTML = rows.join('');
 }
 
 function initMappingReviewScreen() {
@@ -616,18 +681,48 @@ function _oppStoreFile(file) {
 
 function _oppResetUI() {
   // Reset Opportunity section to default collapsed state
-  const expanded = document.getElementById('opp-expanded');
-  const btn      = document.getElementById('opp-expand-btn');
-  const dropLbl  = document.getElementById('opp-drop-label');
-  const selDiv   = document.getElementById('opp-file-selected');
-  const fileInp  = document.getElementById('opp-file-input');
+  const expanded  = document.getElementById('opp-expanded');
+  const btn       = document.getElementById('opp-expand-btn');
+  const dropLbl   = document.getElementById('opp-drop-label');
+  const selDiv    = document.getElementById('opp-file-selected');
+  const fileInp   = document.getElementById('opp-file-input');
+  const oppCont   = document.getElementById('opp-report-container');
+  const viewOpp   = document.getElementById('view-opp');
   if (expanded) expanded.style.display = 'none';
-  if (btn) btn.textContent = '+ Step 2 — Upload Opportunity Register (optional)';
-  if (dropLbl) dropLbl.textContent = 'Tap to upload NP Register (Excel)';
-  if (selDiv)  { selDiv.classList.add('hidden'); selDiv.textContent = ''; }
-  if (fileInp) fileInp.value = '';
+  if (btn) {
+    btn.textContent = '+ Step 2 — Upload Opportunity Register (optional)';
+    btn.classList.remove('opp-toggle-active');
+    btn.style.background  = '';
+    btn.style.color       = '';
+    btn.style.borderStyle = '';
+  }
+  if (dropLbl)  dropLbl.textContent = 'Tap to upload NP Register (Excel)';
+  if (selDiv)   { selDiv.classList.add('hidden'); selDiv.textContent = ''; }
+  if (fileInp)  fileInp.value = '';
+  if (oppCont)  oppCont.innerHTML = '';
+  if (viewOpp)  viewOpp.style.display = 'none';
   // Hide toggle bar and reset to POS view
   _oppHideToggleBar();
+}
+
+// ── Mapping review tab switcher (v55) ────────────────────────────
+function switchMappingTab(tab) {
+  const posView  = document.getElementById('mr-view-pos');
+  const oppView  = document.getElementById('mr-view-opp');
+  const posBtn   = document.getElementById('mr-tab-pos');
+  const oppBtn   = document.getElementById('mr-tab-opp');
+  if (!posView || !oppView) return;
+  if (tab === 'pos') {
+    posView.style.display = '';
+    oppView.style.display = 'none';
+    if (posBtn) posBtn.classList.add('active');
+    if (oppBtn) oppBtn.classList.remove('active');
+  } else {
+    posView.style.display = 'none';
+    oppView.style.display = '';
+    if (posBtn) posBtn.classList.remove('active');
+    if (oppBtn) oppBtn.classList.add('active');
+  }
 }
 
 // ── Report view toggle (v55) ─────────────────────────────────────
@@ -650,11 +745,10 @@ function switchReportView(view) {
     if (filterBar) filterBar.style.display = '';
   } else {
     viewPos.style.display = 'none';
-    viewOpp.style.display = '';
+    viewOpp.style.display = 'block';
     if (btnPos) btnPos.classList.remove('active');
     if (btnOpp) btnOpp.classList.add('active');
     if (filterBar) filterBar.style.display = 'none';
-    // Scroll to top of opp report
     window.scrollTo(0, 0);
   }
 }
@@ -746,13 +840,15 @@ async function startGenerate() {
           const displayName = oppStore || saved.storeName || 'Store';
 
           const oppContainer = document.getElementById('opp-report-container');
+          const viewOpp = document.getElementById('view-opp');
           if (oppContainer) {
-            oppContainer.style.display = 'block';
+            // Inject CSS first (scoped for PWA — won't override dark theme)
             if (typeof oppInjectCSS === 'function') oppInjectCSS();
+            // Render into container while it's in the DOM (even if hidden)
             renderOppReport(oppResults, displayName, 'opp-report-container', genDate);
             console.log('[OPP v55] Opportunity Report rendered. Records:',
               oppResults.overview.total_footfalls);
-            // Show toggle bar in report header
+            // Show toggle bar — owner taps it to switch to Opp view
             _oppShowToggleBar();
             showToast('Opportunity Report ready — tap toggle to view');
           }
