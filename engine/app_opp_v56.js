@@ -56,30 +56,30 @@ function _oppValidateSavedMapping() {
  * @param {string} filename  - filename if just uploaded (optional)
  * @param {number} count     - fields mapped (optional)
  */
-function _oppUpdateMappingLabel(filename = '', count = 0) {
+function _oppUpdateMappingLabel(filename, count) {
   const el = document.getElementById('opp-mapping-label');
   if (!el) return;
   const saved = localStorage.getItem('si_opp_mapping_b64');
   if (filename && count > 0) {
-    el.textContent = `✅ ${filename} — ${count} fields mapped`;
-    el.style.color = 'var(--teal,#4ABFBF)';
-  } else if (saved) {
+    el.textContent = '✅ ' + filename + ' — ' + count + ' fields mapped';
+    el.style.color = '#4ABFBF';
+  } else if (saved && typeof parseOppMappingTemplate === 'function') {
     try {
       const check = parseOppMappingTemplate(saved);
       if (check.filledCount > 0) {
-        el.textContent = `✅ Mapping loaded (${check.filledCount} fields)`;
-        el.style.color = 'var(--teal,#4ABFBF)';
+        el.textContent = '✅ Mapping ready (' + check.filledCount + ' fields)';
+        el.style.color = '#4ABFBF';
       } else {
         el.textContent = 'No mapping template — auto-detection will be used';
-        el.style.color = '#888';
+        el.style.color = 'rgba(255,255,255,0.4)';
       }
-    } catch (e) {
+    } catch(e) {
       el.textContent = 'No mapping template — auto-detection will be used';
-      el.style.color = 'var(--grey,#888)';
+      el.style.color = 'rgba(255,255,255,0.4)';
     }
   } else {
     el.textContent = 'No mapping template — auto-detection will be used';
-    el.style.color = '#888';
+    el.style.color = 'rgba(255,255,255,0.4)';
   }
 }
 
@@ -183,14 +183,8 @@ function oppClearMapping() {
       border-color: var(--teal, #1A7A7A);
     }
 
-    /* ── Expanded section ───────────────────────────────── */
-    .opp-expanded-wrap {
-      margin-top: 10px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(74,191,191,0.25);
-      border-radius: 10px;
-      padding: 14px;
-    }
+    /* ── Expanded section: uses inline styles only ──────── */
+    /* .opp-expanded-wrap intentionally empty — controlled inline */
 
     /* ── Mapping status ─────────────────────────────────── */
     .opp-mapping-row {
@@ -204,8 +198,9 @@ function oppClearMapping() {
     }
     .opp-mapping-label-text {
       flex: 1;
-      font-size: 12px;
-      color: rgba(255,255,255,0.45);
+      font-size: inherit;
+      font-family: inherit;
+      color: rgba(255,255,255,0.5);
     }
     .opp-mapping-label-text.opp-mapping-label-ok {
       color: var(--teal-light, #4ABFBF);
