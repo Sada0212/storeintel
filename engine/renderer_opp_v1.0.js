@@ -240,7 +240,35 @@ function oppInjectCSS() {
   if (document.getElementById('opp-styles')) return;
   const s = document.createElement('style');
   s.id = 'opp-styles';
-  s.textContent = OPP_CSS;
+
+  // Detect if running inside the PWA (has #app wrapper)
+  // If so, scope CSS to avoid overriding the PWA's dark theme
+  const inPWA = !!document.getElementById('app');
+  if (inPWA) {
+    // Remove global body/html/reset rules that conflict with PWA dark theme
+    let scoped = OPP_CSS
+      // Remove body rule (would override PWA dark background)
+      .replace(/body\s*\{[^}]*\}/gs, '')
+      // Remove universal reset (PWA already has it)
+      .replace(/\*\s*\{[^}]*\}/gs, '')
+      // Remove @keyframes fadeIn (conflicts with PWA animations)
+      .replace(/@keyframes\s+oppFadeIn\s*\{[^}]*\}/gs, '')
+      // Remove :root overrides that break PWA vars (keep teal vars only)
+      .replace(/:root\s*\{[^}]*\}/gs,
+        ':root { --teal:#1A7A7A; --teal-mid:#1f6060; --teal-dark:#0f3a3a; --teal-light:#4ABFBF; --teal-bg:#e6f4f4; }');
+    // Scope nav/tab rules to inside opp-report-container
+    scoped = scoped
+      .replace(/\.opp-nav/g,  '#opp-report-container .opp-nav')
+      .replace(/\.opp-tab-nav/g, '#opp-report-container .opp-tab-nav')
+      .replace(/\.opp-tab-btn/g, '#opp-report-container .opp-tab-btn')
+      .replace(/\.opp-tab-panel/g, '#opp-report-container .opp-tab-panel')
+      .replace(/\.opp-page/g,  '#opp-report-container .opp-page')
+      .replace(/\.opp-rpt-header/g, '#opp-report-container .opp-rpt-header')
+      .replace(/\.opp-footer/g, '#opp-report-container .opp-footer');
+    s.textContent = scoped;
+  } else {
+    s.textContent = OPP_CSS;
+  }
   document.head.appendChild(s);
 }
 

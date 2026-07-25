@@ -233,6 +233,41 @@ function oppClearMapping() {
       color: var(--teal-light, #4ABFBF) !important;
       border-bottom-color: var(--teal, #1A7A7A) !important;
     }
+
+    /* ── Mapping review tab switcher ────────────────────── */
+    .mapping-review-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .mr-tab {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1.5px solid rgba(255,255,255,0.12);
+      background: transparent;
+      color: rgba(255,255,255,0.5);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .mr-tab.active {
+      background: var(--teal, #1A7A7A);
+      border-color: var(--teal, #1A7A7A);
+      color: #fff;
+    }
+    .mr-tab:not(.active):hover {
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.8);
+    }
+
+    /* ── Report toggle below PDF/New ────────────────────── */
+    #report-toggle-bar {
+      padding: 10px 16px !important;
+      margin: 0 !important;
+    }
   `;
   document.head.appendChild(style);
 })();
