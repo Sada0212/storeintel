@@ -831,22 +831,8 @@ async function startGenerate() {
       .catch(e => { showToast('⚠ Save failed: ' + (e && e.message || e)); });
 
     // ── v56: Opportunity Report pipeline ────────────────────────
-    if (_oppFileBuffer) {
-      // Wait for opp engine scripts to be fully parsed
-      const _runOppPipeline = async () => {
-        // Retry up to 10 times (100ms intervals = 1 second max wait)
-        let attempts = 0;
-        while (typeof ingestOpportunity !== 'function' && attempts < 10) {
-          await new Promise(r => setTimeout(r, 100));
-          attempts++;
-        }
-        if (typeof ingestOpportunity !== 'function') {
-          console.error('[OPP v56] Engine not loaded after 1s — skipping');
-          showToast('⚠ Opportunity engine not loaded');
-          return;
-        }
+    if (_oppFileBuffer && typeof ingestOpportunity === 'function') {
       try {
-        setStep('Building Opportunity Report…', 95);
         const sector = 'jewellery';
         const { cleanRows, validation, storeName: oppStore }
           = ingestOpportunity(_oppFileBuffer, sector);
@@ -856,31 +842,31 @@ async function startGenerate() {
           const genDate     = new Date().toLocaleDateString('en-IN',
             { day: '2-digit', month: 'short', year: 'numeric' });
           const displayName = oppStore || saved.storeName || 'Store';
-
           const oppContainer = document.getElementById('opp-report-container');
-          const viewOpp = document.getElementById('view-opp');
           if (oppContainer) {
-            // Inject CSS first (scoped for PWA — won't override dark theme)
             if (typeof oppInjectCSS === 'function') oppInjectCSS();
-            // Render into container while it's in the DOM (even if hidden)
             renderOppReport(oppResults, displayName, 'opp-report-container', genDate);
-            console.log('[OPP v55] Opportunity Report rendered. Records:',
-              oppResults.overview.total_footfalls);
-            // Show toggle bar — owner taps it to switch to Opp view
             _oppShowToggleBar();
-            showToast('Opportunity Report ready — tap toggle to view');
+            showToast('Opportunity Report ready — tap toggle above to view');
+            console.log('[OPP v56] Rendered:', oppResults.overview.total_footfalls, 'records');
           }
         } else {
-          console.warn('[OPP v55] No records after ingestion — Opportunity Report skipped');
-          showToast('⚠ Opportunity file had no readable records');
+          showToast('⚠ Opportunity file: no readable records found');
         }
       } catch(oppErr) {
-        // Non-fatal — POS report is already showing correctly
-        console.error('[OPP v55] Opportunity pipeline error:', oppErr);
-        showToast('⚠ Opp error: ' + (oppErr.message || 'check console'));
+        console.error('[OPP v56] Error:', oppErr.message || oppErr);
+        showToast('⚠ Opp error: ' + (oppErr.message || 'unknown'));
       }
+    } else if (_oppFileBuffer) {
+      // Engine not loaded yet — wait and retry once
+      setTimeout(() => {
+        if (typeof ingestOpportunity === 'function') {
+          const ev = new Event('opp-retry');
+          document.dispatchEvent(ev);
+        }
+      }, 1000);
     }
-    // ── END v55 Opportunity Report ───────────────────────────────
+    // ── END Opportunity Report ───────────────────────────────────
 
   } catch(err) {
     console.error(err);
