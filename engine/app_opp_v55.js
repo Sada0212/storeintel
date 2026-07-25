@@ -127,17 +127,46 @@ function oppClearMapping() {
       --teal-mid: #1f6060;
       --teal-dark: #0f3a3a;
       --teal-light: #4ABFBF;
-      --teal-bg: #e6f4f4;
+      --teal-bg: rgba(26,122,122,0.15);
     }
-    /* Opportunity Report container */
-    #opp-report-container { display:none; }
 
-    /* Toggle button — uses PWA dark theme vars */
+    /* ── Report toggle bar ──────────────────────────────── */
+    #report-toggle-bar {
+      display: none;
+      background: var(--navy2, #1a2e4a);
+      padding: 8px 16px;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .rpt-toggle-btn {
+      flex: 1;
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1.5px solid rgba(74,191,191,0.3);
+      background: transparent;
+      color: var(--teal-light, #4ABFBF);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.2px;
+    }
+    .rpt-toggle-btn.active {
+      background: var(--teal, #1A7A7A);
+      border-color: var(--teal, #1A7A7A);
+      color: #fff;
+    }
+    .rpt-toggle-btn:not(.active):hover {
+      background: rgba(74,191,191,0.1);
+    }
+
+    /* ── Opportunity expand toggle ──────────────────────── */
     .btn-opp-toggle {
       width: 100%;
       padding: 13px 16px;
       background: rgba(26,122,122,0.15);
-      border: 1.5px dashed var(--teal, #1A7A7A);
+      border: 1.5px dashed var(--teal-light, #4ABFBF);
       border-radius: 10px;
       color: var(--teal-light, #4ABFBF);
       font-family: inherit;
@@ -147,26 +176,28 @@ function oppClearMapping() {
       text-align: left;
       transition: all 0.2s;
     }
-    .btn-opp-toggle:hover,
     .btn-opp-toggle.opp-toggle-active {
-      background: rgba(26,122,122,0.28);
+      background: var(--teal, #1A7A7A);
+      color: #fff;
       border-style: solid;
+      border-color: var(--teal, #1A7A7A);
     }
 
-    /* Expanded section — dark theme aware */
+    /* ── Expanded section ───────────────────────────────── */
     .opp-expanded-wrap {
       margin-top: 10px;
       background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(26,122,122,0.35);
+      border: 1px solid rgba(74,191,191,0.25);
       border-radius: 10px;
       padding: 14px;
     }
 
-    /* Mapping status row */
+    /* ── Mapping status ─────────────────────────────────── */
     .opp-mapping-row {
       display: flex;
       align-items: center;
       background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
       border-radius: 7px;
       padding: 9px 12px;
       margin-bottom: 10px;
@@ -174,40 +205,33 @@ function oppClearMapping() {
     .opp-mapping-label-text {
       flex: 1;
       font-size: 12px;
-      color: var(--grey, #888);
+      color: rgba(255,255,255,0.45);
     }
-    .opp-mapping-label-ok {
-      color: var(--teal-light, #4ABFBF) !important;
-    }
-
-    /* Drop zone — inherits .upload-zone from style.css */
-    .opp-drop-zone {
-      border-color: var(--teal, #1A7A7A) !important;
-    }
-    .opp-drop-zone .upload-zone-text {
+    .opp-mapping-label-text.opp-mapping-label-ok {
       color: var(--teal-light, #4ABFBF);
     }
 
-    /* Selected file indicator */
+    /* ── Selected file indicator ────────────────────────── */
     .opp-file-selected {
       margin-top: 8px;
-      padding: 8px 12px;
-      background: rgba(26,107,69,0.25);
-      border-radius: 6px;
+      padding: 9px 12px;
+      background: rgba(26,107,69,0.3);
+      border: 1px solid rgba(110,232,168,0.3);
+      border-radius: 7px;
       font-size: 12px;
       color: #6de8a8;
       font-weight: 600;
     }
     .opp-file-selected.hidden { display: none; }
 
-    /* Opportunity tab in tab bar */
-    #tab-btn-opp { border-color: var(--teal, #1A7A7A); }
-    #tab-btn-opp.active { color: var(--teal-light, #4ABFBF) !important; }
+    /* ── Opportunity Report container ───────────────────── */
+    #view-opp { display: none; }
+    #opp-report-container { min-height: 100vh; }
 
-    /* Opp tab nav active state uses teal */
+    /* ── Opp report internal nav teal overrides ─────────── */
     .opp-tab-btn.active {
-      color: var(--teal-light) !important;
-      border-bottom-color: var(--teal) !important;
+      color: var(--teal-light, #4ABFBF) !important;
+      border-bottom-color: var(--teal, #1A7A7A) !important;
     }
   `;
   document.head.appendChild(style);
