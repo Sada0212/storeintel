@@ -80,6 +80,28 @@
       </div>
     </div>
 
+    <!-- Step 3: Opportunity mapping (optional) -->
+    <div class="setup-step" id="opp-setup-step">
+      <div class="setup-step-num" style="background:var(--teal,#1A7A7A)">3</div>
+      <div class="setup-step-body">
+        <div class="setup-step-title">
+          Opportunity Register mapping
+          <span style="font-size:11px;font-weight:400;color:var(--grey);margin-left:6px">optional</span>
+        </div>
+        <div class="setup-step-hint">
+          If your staff records no-purchase visits, upload the
+          <strong>StoreIntel_Opportunity_Mapping_Template.xlsx</strong> here.
+          Skip if you don't have an NP register.
+        </div>
+        <div class="upload-zone small" id="opp-mapping-upload-zone">
+          <input type="file" id="opp-mapping-file-input" accept=".xlsx,.xls">
+          <div class="upload-icon" style="font-size:24px">📋</div>
+          <div class="upload-zone-text">Tap to pick Opportunity mapping file</div>
+          <div class="file-name hidden" id="opp-mapping-file-name"></div>
+        </div>
+      </div>
+    </div>
+
     <button class="btn btn-primary mt-16" id="btn-setup-continue" disabled>
       Read Mapping & Continue →
     </button>
@@ -181,72 +203,44 @@
 
       <button id="opp-expand-btn"
         onclick="oppExpandSection()"
-        style="width:100%;padding:11px 16px;background:#e6f4f4;
-               border:1.5px dashed #1A7A7A;border-radius:9px;
-               color:#1A7A7A;font-family:inherit;font-size:13px;
-               font-weight:600;cursor:pointer;text-align:left;
-               transition:all 0.2s">
+        class="btn-opp-toggle">
         + Step 2 — Upload Opportunity Register (optional)
       </button>
 
-      <div id="opp-expanded" style="display:none;margin-top:10px;
-           background:#f9fdfd;border:1px solid #b3dfdf;border-radius:9px;padding:14px">
+      <div id="opp-expanded" style="display:none" class="opp-expanded-wrap">
 
-        <p style="font-size:12px;color:#6b7280;margin-bottom:10px;line-height:1.6">
+        <p class="text-sm text-grey" style="margin-bottom:10px;line-height:1.6">
           Your NP register — the file your staff fills when a customer visits but
-          doesn't buy. Generates the <strong style="color:#1A7A7A">Opportunity Report</strong>
+          doesn't buy. Generates the
+          <strong style="color:#4ABFBF">Opportunity Report</strong>
           alongside your sales report. Completely optional.
         </p>
 
-        <!-- Opportunity Mapping Template (one-time setup) -->
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-                    background:#fff;border:1px solid #ddd;border-radius:7px;
-                    padding:9px 12px;margin-bottom:10px">
-          <span id="opp-mapping-label"
-            style="flex:1;font-size:12px;color:#888;min-width:0">
+        <!-- Mapping status (populated from setup Step 3) -->
+        <div class="opp-mapping-row">
+          <span id="opp-mapping-label" class="opp-mapping-label-text">
             No mapping template — auto-detection will be used
           </span>
-          <input type="file" id="opp-mapping-input" accept=".xlsx"
-            style="display:none" onchange="oppHandleMappingUpload(this)">
-          <button onclick="document.getElementById('opp-mapping-input').click()"
-            style="background:#1A7A7A;color:#fff;border:none;border-radius:6px;
-                   padding:6px 11px;font-size:12px;font-weight:600;
-                   cursor:pointer;font-family:inherit;white-space:nowrap">
-            Upload Template
-          </button>
-          <button onclick="oppClearMapping()"
-            style="background:#aaa;color:#fff;border:none;border-radius:6px;
-                   padding:6px 10px;font-size:12px;font-weight:600;
-                   cursor:pointer;font-family:inherit">
-            Clear
-          </button>
         </div>
 
         <!-- NP file drop zone -->
         <div id="opp-drop-zone"
+          class="upload-zone small opp-drop-zone"
           onclick="document.getElementById('opp-file-input').click()"
-          ondragover="event.preventDefault();this.style.background='#c8e8e8'"
-          ondragleave="this.style.background='#e6f4f4'"
-          ondrop="oppHandleDropUpfront(event)"
-          style="border:2px dashed #1A7A7A;border-radius:9px;padding:22px 16px;
-                 text-align:center;cursor:pointer;background:#e6f4f4;
-                 transition:background 0.15s">
-          <div style="font-size:24px;margin-bottom:4px">📋</div>
-          <div id="opp-drop-label"
-            style="font-size:13px;font-weight:600;color:#1A7A7A;margin-bottom:2px">
+          ondragover="event.preventDefault();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="oppHandleDropUpfront(event)">
+          <div class="upload-icon" style="font-size:24px">📋</div>
+          <div id="opp-drop-label" class="upload-zone-text">
             Tap to upload NP Register (Excel)
           </div>
-          <div style="font-size:11px;color:#6b7280">Supports .xlsx, .xls, .csv</div>
+          <div class="text-sm text-grey">Supports .xlsx, .xls, .csv</div>
         </div>
         <input type="file" id="opp-file-input" accept=".xlsx,.xls,.csv"
           style="display:none" onchange="oppSelectFileUpfront(this)">
 
         <!-- Selected file indicator -->
-        <div id="opp-file-selected"
-          style="display:none;margin-top:8px;padding:8px 12px;
-                 background:#d5f5e3;border-radius:6px;
-                 font-size:12px;color:#1a6b45;font-weight:600">
-        </div>
+        <div id="opp-file-selected" class="opp-file-selected hidden"></div>
 
       </div>
     </div>
@@ -352,6 +346,10 @@
       <button class="tab-btn" data-tab="tab-action">
         <span class="tab-icon">⚡</span><span class="tab-label">Actions</span>
       </button>
+      <button class="tab-btn" id="tab-btn-opp" data-tab="tab-opp"
+        style="display:none" onclick="oppScrollToReport()">
+        <span class="tab-icon">📋</span><span class="tab-label">Opportunity</span>
+      </button>
     </nav>
 
     <!-- Tab panels -->
@@ -389,9 +387,10 @@
 
     </div>
 
-    <!-- ── OPPORTUNITY REPORT renders here (v55) ────────────── -->
-    <div id="opp-report-container" style="display:none"></div>
-    <!-- ── END OPPORTUNITY REPORT ───────────────────────────── -->
+
+
+    <!-- ── OPPORTUNITY REPORT (v55) — scrolls into view via tab ── -->
+    <div id="opp-report-container" style="display:none;padding:0 0 32px"></div>
 
   </div>
 

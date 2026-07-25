@@ -251,6 +251,47 @@ function initSetupScreen() {
     continueBtn.disabled = !(state.storeName && state.mappingFileBuffer);
   }
 
+  // ── Opportunity mapping upload in setup (v55) ──────────────────
+  const oppMappingZone  = document.getElementById('opp-mapping-upload-zone');
+  const oppMappingInput = document.getElementById('opp-mapping-file-input');
+  const oppMappingName  = document.getElementById('opp-mapping-file-name');
+
+  function handleOppMappingFile(file) {
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+      showToast('Please pick the Opportunity mapping .xlsx file'); return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const base64 = e.target.result.split(',')[1];
+      localStorage.setItem('si_opp_mapping_b64', base64);
+      if (typeof parseOppMappingTemplate === 'function') {
+        const tmpl = parseOppMappingTemplate(base64);
+        if (oppMappingName) {
+          oppMappingName.textContent = '✅ ' + file.name + ' (' + tmpl.filledCount + ' fields)';
+          oppMappingName.classList.remove('hidden');
+        }
+        showToast('Opportunity mapping saved — ' + tmpl.filledCount + ' fields ✓');
+        console.log('[OPP v55] Setup mapping saved:', tmpl.filledCount, 'fields');
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  if (oppMappingZone && oppMappingInput) {
+    oppMappingZone.addEventListener('dragover', e => {
+      e.preventDefault(); oppMappingZone.classList.add('drag-over');
+    });
+    oppMappingZone.addEventListener('dragleave', () =>
+      oppMappingZone.classList.remove('drag-over'));
+    oppMappingZone.addEventListener('drop', e => {
+      e.preventDefault(); oppMappingZone.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) handleOppMappingFile(e.dataTransfer.files[0]);
+    });
+    oppMappingInput.addEventListener('change', () => {
+      if (oppMappingInput.files[0]) handleOppMappingFile(oppMappingInput.files[0]);
+    });
+  }
+
   continueBtn.addEventListener('click', () => {
     try {
       // Parse the mapping.xlsx using ingestion engine
@@ -574,15 +615,25 @@ function _oppResetUI() {
   const selDiv   = document.getElementById('opp-file-selected');
   const fileInp  = document.getElementById('opp-file-input');
   if (expanded) expanded.style.display = 'none';
-  if (btn) {
-    btn.textContent = '+ Step 2 — Upload Opportunity Register (optional)';
-    btn.style.background  = '#e6f4f4';
-    btn.style.color       = '#1A7A7A';
-    btn.style.borderStyle = 'dashed';
-  }
+  if (btn) btn.textContent = '+ Step 2 — Upload Opportunity Register (optional)';
   if (dropLbl) dropLbl.textContent = 'Tap to upload NP Register (Excel)';
-  if (selDiv)  { selDiv.style.display = 'none'; selDiv.textContent = ''; }
+  if (selDiv)  { selDiv.classList.add('hidden'); selDiv.textContent = ''; }
   if (fileInp) fileInp.value = '';
+  // Hide Opportunity tab
+  const oppTabBtn = document.getElementById('tab-btn-opp');
+  if (oppTabBtn) oppTabBtn.style.display = 'none';
+}
+
+// Scroll to Opportunity Report when tab is tapped (Fix 3)
+function oppScrollToReport() {
+  const container = document.getElementById('opp-report-container');
+  if (container && container.style.display !== 'none') {
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  // Highlight the tab as active briefly
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const oppTabBtn = document.getElementById('tab-btn-opp');
+  if (oppTabBtn) oppTabBtn.classList.add('active');
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -664,6 +715,9 @@ async function startGenerate() {
             renderOppReport(oppResults, displayName, 'opp-report-container', genDate);
             console.log('[OPP v55] Opportunity Report rendered. Records:',
               oppResults.overview.total_footfalls);
+            // Show Opportunity tab in tab bar
+            const oppTabBtn = document.getElementById('tab-btn-opp');
+            if (oppTabBtn) oppTabBtn.style.display = '';
             showToast(`Opportunity Report ready — ${oppResults.overview.p1_count} to call today`);
           }
         } else {
