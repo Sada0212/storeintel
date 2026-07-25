@@ -62,20 +62,20 @@ function _oppUpdateMappingLabel(filename = '', count = 0) {
   const saved = localStorage.getItem('si_opp_mapping_b64');
   if (filename && count > 0) {
     el.textContent = `✅ ${filename} — ${count} fields mapped`;
-    el.style.color = '#1A7A7A';
+    el.style.color = 'var(--teal,#4ABFBF)';
   } else if (saved) {
     try {
       const check = parseOppMappingTemplate(saved);
       if (check.filledCount > 0) {
         el.textContent = `✅ Mapping loaded (${check.filledCount} fields)`;
-        el.style.color = '#1A7A7A';
+        el.style.color = 'var(--teal,#4ABFBF)';
       } else {
         el.textContent = 'No mapping template — auto-detection will be used';
         el.style.color = '#888';
       }
     } catch (e) {
       el.textContent = 'No mapping template — auto-detection will be used';
-      el.style.color = '#888';
+      el.style.color = 'var(--grey,#888)';
     }
   } else {
     el.textContent = 'No mapping template — auto-detection will be used';
@@ -131,6 +131,79 @@ function oppClearMapping() {
     }
     /* Opportunity Report container */
     #opp-report-container { display:none; }
+
+    /* Toggle button — uses PWA dark theme vars */
+    .btn-opp-toggle {
+      width: 100%;
+      padding: 13px 16px;
+      background: rgba(26,122,122,0.15);
+      border: 1.5px dashed var(--teal, #1A7A7A);
+      border-radius: 10px;
+      color: var(--teal-light, #4ABFBF);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+    }
+    .btn-opp-toggle:hover,
+    .btn-opp-toggle.opp-toggle-active {
+      background: rgba(26,122,122,0.28);
+      border-style: solid;
+    }
+
+    /* Expanded section — dark theme aware */
+    .opp-expanded-wrap {
+      margin-top: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(26,122,122,0.35);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    /* Mapping status row */
+    .opp-mapping-row {
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.06);
+      border-radius: 7px;
+      padding: 9px 12px;
+      margin-bottom: 10px;
+    }
+    .opp-mapping-label-text {
+      flex: 1;
+      font-size: 12px;
+      color: var(--grey, #888);
+    }
+    .opp-mapping-label-ok {
+      color: var(--teal-light, #4ABFBF) !important;
+    }
+
+    /* Drop zone — inherits .upload-zone from style.css */
+    .opp-drop-zone {
+      border-color: var(--teal, #1A7A7A) !important;
+    }
+    .opp-drop-zone .upload-zone-text {
+      color: var(--teal-light, #4ABFBF);
+    }
+
+    /* Selected file indicator */
+    .opp-file-selected {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: rgba(26,107,69,0.25);
+      border-radius: 6px;
+      font-size: 12px;
+      color: #6de8a8;
+      font-weight: 600;
+    }
+    .opp-file-selected.hidden { display: none; }
+
+    /* Opportunity tab in tab bar */
+    #tab-btn-opp { border-color: var(--teal, #1A7A7A); }
+    #tab-btn-opp.active { color: var(--teal-light, #4ABFBF) !important; }
+
     /* Opp tab nav active state uses teal */
     .opp-tab-btn.active {
       color: var(--teal-light) !important;
