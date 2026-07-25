@@ -628,16 +628,17 @@ function oppExpandSection() {
   const isOpen = expanded.style.display !== 'none';
   expanded.style.display = isOpen ? 'none' : 'block';
   if (isOpen) {
-    btn.textContent = '+ Step 2 — Upload Opportunity Register (optional)';
-    btn.style.background  = '#e6f4f4';
-    btn.style.color       = '#1A7A7A';
+    btn.textContent       = '+ Step 2 — Upload Opportunity Register (optional)';
+    btn.style.background  = 'rgba(26,122,122,0.12)';
+    btn.style.color       = 'rgba(74,191,191,0.9)';
     btn.style.borderStyle = 'dashed';
+    btn.style.borderColor = 'rgba(74,191,191,0.45)';
   } else {
-    btn.textContent = '− Opportunity Register (tap to collapse)';
-    btn.style.background  = '#1A7A7A';
+    btn.textContent       = '− Opportunity Register (tap to collapse)';
+    btn.style.background  = 'rgba(26,122,122,0.3)';
     btn.style.color       = '#fff';
     btn.style.borderStyle = 'solid';
-    // Validate saved mapping when section opens
+    btn.style.borderColor = 'var(--teal,#1A7A7A)';
     if (typeof _oppValidateSavedMapping === 'function') _oppValidateSavedMapping();
     if (typeof _oppUpdateMappingLabel   === 'function') _oppUpdateMappingLabel();
   }
@@ -694,11 +695,11 @@ function _oppResetUI() {
   const viewOpp   = document.getElementById('view-opp');
   if (expanded) expanded.style.display = 'none';
   if (btn) {
-    btn.textContent = '+ Step 2 — Upload Opportunity Register (optional)';
-    btn.classList.remove('opp-toggle-active');
-    btn.style.background  = '';
-    btn.style.color       = '';
-    btn.style.borderStyle = '';
+    btn.textContent       = '+ Step 2 — Upload Opportunity Register (optional)';
+    btn.style.background  = 'rgba(26,122,122,0.18)';
+    btn.style.color       = '#4ABFBF';
+    btn.style.borderStyle = 'dashed';
+    btn.style.borderColor = 'rgba(74,191,191,0.45)';
   }
   if (dropLbl)  dropLbl.textContent = 'Tap to upload NP Register (Excel)';
   if (selDiv)   { selDiv.classList.add('hidden'); selDiv.textContent = ''; }
@@ -829,8 +830,21 @@ async function startGenerate() {
       })
       .catch(e => { showToast('⚠ Save failed: ' + (e && e.message || e)); });
 
-    // ── v55: Opportunity Report pipeline ────────────────────────
-    if (_oppFileBuffer && typeof ingestOpportunity === 'function') {
+    // ── v56: Opportunity Report pipeline ────────────────────────
+    if (_oppFileBuffer) {
+      // Wait for opp engine scripts to be fully parsed
+      const _runOppPipeline = async () => {
+        // Retry up to 10 times (100ms intervals = 1 second max wait)
+        let attempts = 0;
+        while (typeof ingestOpportunity !== 'function' && attempts < 10) {
+          await new Promise(r => setTimeout(r, 100));
+          attempts++;
+        }
+        if (typeof ingestOpportunity !== 'function') {
+          console.error('[OPP v56] Engine not loaded after 1s — skipping');
+          showToast('⚠ Opportunity engine not loaded');
+          return;
+        }
       try {
         setStep('Building Opportunity Report…', 95);
         const sector = 'jewellery';
@@ -863,7 +877,7 @@ async function startGenerate() {
       } catch(oppErr) {
         // Non-fatal — POS report is already showing correctly
         console.error('[OPP v55] Opportunity pipeline error:', oppErr);
-        showToast('⚠ Opportunity Report could not be generated');
+        showToast('⚠ Opp error: ' + (oppErr.message || 'check console'));
       }
     }
     // ── END v55 Opportunity Report ───────────────────────────────

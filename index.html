@@ -222,48 +222,74 @@
 
       <button id="opp-expand-btn"
         onclick="oppExpandSection()"
-        class="btn-opp-toggle">
+        style="width:100%;padding:12px 16px;
+               background:rgba(26,122,122,0.18);
+               border:1.5px dashed rgba(74,191,191,0.6);
+               border-radius:10px;color:#4ABFBF;
+               font-family:inherit;font-size:13px;font-weight:600;
+               cursor:pointer;text-align:left;letter-spacing:0.2px">
         + Step 2 — Upload Opportunity Register (optional)
       </button>
 
-      <div id="opp-expanded" style="display:none;margin-top:10px;background:#162235;border:1px solid rgba(74,191,191,0.2);border-radius:10px;padding:14px">
+      <div id="opp-expanded"
+        style="display:none;margin-top:10px;
+               background:#0f1e30;
+               border:1px solid rgba(74,191,191,0.2);
+               border-radius:10px;padding:14px">
 
-        <p class="text-sm text-grey" style="margin-bottom:10px;line-height:1.6">
-          Your NP register — the file your staff fills when a customer visits but
-          doesn't buy. Generates the
-          <strong style="color:#4ABFBF">Opportunity Report</strong>
-          alongside your sales report. Completely optional.
+        <p style="font-size:12px;color:rgba(255,255,255,0.55);
+                  margin-bottom:12px;line-height:1.6;font-family:inherit">
+          Your NP register — fills when a customer visits but doesn't buy.
+          Generates the <strong style="color:#4ABFBF">Opportunity Report</strong>
+          alongside your sales report. Optional.
         </p>
 
-        <!-- Mapping status (populated from setup Step 3) -->
-        <div class="opp-mapping-row">
-          <span id="opp-mapping-label" class="opp-mapping-label-text">
+        <!-- Mapping status row -->
+        <div style="display:flex;align-items:center;
+                    background:rgba(255,255,255,0.05);
+                    border:1px solid rgba(255,255,255,0.08);
+                    border-radius:7px;padding:9px 12px;margin-bottom:12px">
+          <span id="opp-mapping-label"
+            style="flex:1;font-size:12px;font-family:inherit;
+                   color:rgba(255,255,255,0.4)">
             No mapping template — auto-detection will be used
           </span>
         </div>
 
-        <!-- NP file drop zone -->
+        <!-- NP file drop zone — identical structure to POS zone -->
         <div id="opp-drop-zone"
-          class="upload-zone small"
           onclick="document.getElementById('opp-file-input').click()"
-          ondragover="event.preventDefault();this.classList.add('drag-over')"
-          ondragleave="this.classList.remove('drag-over')"
-          ondrop="oppHandleDropUpfront(event)">
-          <div class="upload-icon" style="font-size:24px">📋</div>
-          <div id="opp-drop-label" class="upload-zone-text">
-            Tap to upload NP Register (Excel)
+          ondragover="event.preventDefault();this.style.borderColor='#4ABFBF'"
+          ondragleave="this.style.borderColor='rgba(74,191,191,0.5)'"
+          ondrop="oppHandleDropUpfront(event)"
+          style="border:2px dashed rgba(74,191,191,0.5);
+                 border-radius:10px;padding:24px 16px;
+                 text-align:center;cursor:pointer;
+                 background:rgba(255,255,255,0.03)">
+          <div style="font-size:28px;margin-bottom:6px;opacity:0.7">📋</div>
+          <div id="opp-drop-label"
+            style="font-size:14px;font-weight:600;font-family:inherit;
+                   color:#4ABFBF;margin-bottom:4px">
+            Tap to upload NP Register
           </div>
-          <div class="text-sm text-grey">Supports .xlsx, .xls, .csv</div>
+          <div style="font-size:12px;font-family:inherit;
+                      color:rgba(255,255,255,0.35)">.xlsx, .xls, .csv</div>
         </div>
         <input type="file" id="opp-file-input" accept=".xlsx,.xls,.csv"
           style="display:none" onchange="oppSelectFileUpfront(this)">
 
         <!-- Selected file indicator -->
-        <div id="opp-file-selected" class="opp-file-selected hidden"></div>
+        <div id="opp-file-selected"
+          style="display:none;margin-top:10px;padding:9px 12px;
+                 background:rgba(26,107,69,0.3);
+                 border:1px solid rgba(110,232,168,0.3);
+                 border-radius:7px;font-size:12px;font-family:inherit;
+                 color:#6de8a8;font-weight:600">
+        </div>
 
       </div>
     </div>
-    <!-- ── END OPPORTUNITY SECTION ─────────────────────────── -->
+    <!-- ── END OPPORTUNITY SECTION ─────────────────────────────── -->
 
     <button class="btn btn-primary mt-16" id="btn-generate" disabled>
       Generate Report
