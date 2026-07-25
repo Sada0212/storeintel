@@ -1,4 +1,4 @@
-/* StoreIntel PWA — app.js v55
+/* StoreIntel PWA — app.js v56
    Two-phase flow:
    SETUP (once): store name → upload mapping.xlsx → review → save
    MONTHLY:      pick POS excel + optional NP file → generate report
@@ -386,11 +386,15 @@ function _buildOppMappingReview() {
   const saved = localStorage.getItem('si_opp_mapping_b64');
   if (!saved) { oppTabBtn.style.display = 'none'; return; }
 
+  // Opp engine may not be loaded yet — retry after short delay
+  if (typeof parseOppMappingTemplate !== 'function') {
+    setTimeout(_buildOppMappingReview, 300);
+    return;
+  }
+
   let tmpl = null;
   try {
-    if (typeof parseOppMappingTemplate === 'function') {
-      tmpl = parseOppMappingTemplate(saved);
-    }
+    tmpl = parseOppMappingTemplate(saved);
   } catch(e) { oppTabBtn.style.display = 'none'; return; }
 
   if (!tmpl || tmpl.filledCount === 0) { oppTabBtn.style.display = 'none'; return; }
@@ -740,14 +744,14 @@ function switchReportView(view) {
   if (view === 'pos') {
     viewPos.style.display = '';
     viewOpp.style.display = 'none';
-    if (btnPos) btnPos.classList.add('active');
-    if (btnOpp) btnOpp.classList.remove('active');
+    if (btnPos) { btnPos.classList.add('active'); }
+    if (btnOpp) { btnOpp.classList.remove('active'); }
     if (filterBar) filterBar.style.display = '';
   } else {
     viewPos.style.display = 'none';
     viewOpp.style.display = 'block';
-    if (btnPos) btnPos.classList.remove('active');
-    if (btnOpp) btnOpp.classList.add('active');
+    if (btnPos) { btnPos.classList.remove('active'); }
+    if (btnOpp) { btnOpp.classList.add('active'); }
     if (filterBar) filterBar.style.display = 'none';
     window.scrollTo(0, 0);
   }
