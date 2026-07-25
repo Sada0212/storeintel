@@ -1,7 +1,7 @@
-/* StoreIntel PWA — app.js v3
+/* StoreIntel PWA — app.js v55
    Two-phase flow:
    SETUP (once): store name → upload mapping.xlsx → review → save
-   MONTHLY:      pick POS excel → generate report
+   MONTHLY:      pick POS excel + optional NP file → generate report
 */
 'use strict';
 
@@ -16,6 +16,9 @@ const state = {
   ingestResult:       null,
   deferredInstall:    null,
 };
+
+// ── OPPORTUNITY STATE (v55) ───────────────────────────────────────
+let _oppFileBuffer = null;   // set when owner selects NP file upfront
 
 // ── STORAGE KEYS ──────────────────────────────────────────────────
 const STORE_KEY      = 'si_store_name';
@@ -457,12 +460,16 @@ function initHomeScreen() {
   document.getElementById('btn-new-report')?.addEventListener('click', () => {
     state.posFileBuffer = null;
     state.posFileName   = '';
+    _oppFileBuffer      = null;   // v55: clear NP file too
 
     // Reset file input so same file can be re-picked
     posInput.value = '';
     posNameEl.textContent = '';
     posNameEl.classList.add('hidden');
     genBtn.disabled = true;
+
+    // Reset Opportunity section UI
+    _oppResetUI();
 
     // Clear old report sections and reset to summary tab
     Renderer.switchTab('tab-summary');
@@ -477,6 +484,10 @@ function initHomeScreen() {
     const filterMount = document.getElementById('siFilterBarMount');
     if (filterMount) filterMount.innerHTML = '';
 
+    // Clear Opportunity Report container
+    const oppContainer = document.getElementById('opp-report-container');
+    if (oppContainer) { oppContainer.innerHTML = ''; oppContainer.style.display = 'none'; }
+
     // v48: go to drawer if saved reports exist, else home
     const savedForNew = loadFromStorage();
     if (savedForNew) {
@@ -487,6 +498,91 @@ function initHomeScreen() {
       showScreen('screen-home');
     }
   });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// OPPORTUNITY REGISTER — upfront upload handlers (v55)
+// ══════════════════════════════════════════════════════════════════
+
+function oppExpandSection() {
+  const expanded = document.getElementById('opp-expanded');
+  const btn      = document.getElementById('opp-expand-btn');
+  if (!expanded || !btn) return;
+  const isOpen = expanded.style.display !== 'none';
+  expanded.style.display = isOpen ? 'none' : 'block';
+  if (isOpen) {
+    btn.textContent = '+ Step 2 — Upload Opportunity Register (optional)';
+    btn.style.background  = '#e6f4f4';
+    btn.style.color       = '#1A7A7A';
+    btn.style.borderStyle = 'dashed';
+  } else {
+    btn.textContent = '− Opportunity Register (tap to collapse)';
+    btn.style.background  = '#1A7A7A';
+    btn.style.color       = '#fff';
+    btn.style.borderStyle = 'solid';
+    // Validate saved mapping when section opens
+    if (typeof _oppValidateSavedMapping === 'function') _oppValidateSavedMapping();
+    if (typeof _oppUpdateMappingLabel   === 'function') _oppUpdateMappingLabel();
+  }
+}
+
+function oppHandleDropUpfront(e) {
+  e.preventDefault();
+  const dz = document.getElementById('opp-drop-zone');
+  if (dz) dz.style.background = '#e6f4f4';
+  const file = e.dataTransfer.files[0];
+  if (file) _oppStoreFile(file);
+}
+
+function oppSelectFileUpfront(input) {
+  const file = input.files[0];
+  if (file) _oppStoreFile(file);
+}
+
+function _oppStoreFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls','csv'].includes(ext)) {
+    showToast('Pick a .xlsx, .xls, or .csv file');
+    return;
+  }
+  readFileAsArrayBuffer(file).then(buf => {
+    _oppFileBuffer = buf;
+    // Update UI
+    const dropLbl = document.getElementById('opp-drop-label');
+    const selDiv  = document.getElementById('opp-file-selected');
+    const btn     = document.getElementById('opp-expand-btn');
+    if (dropLbl) dropLbl.textContent = `📄 ${file.name}`;
+    if (selDiv) {
+      selDiv.style.display = 'block';
+      selDiv.textContent   = `✅ ${file.name} — Opportunity Report will be generated`;
+    }
+    if (btn && !btn.textContent.includes('collapse')) {
+      btn.textContent = `✅ Opportunity Register: ${file.name}`;
+      btn.style.background  = '#1A7A7A';
+      btn.style.color       = '#fff';
+      btn.style.borderStyle = 'solid';
+    }
+    console.log('[OPP v55] NP file ready:', file.name);
+  }).catch(() => showToast('Could not read the NP file'));
+}
+
+function _oppResetUI() {
+  // Reset Opportunity section to default collapsed state
+  const expanded = document.getElementById('opp-expanded');
+  const btn      = document.getElementById('opp-expand-btn');
+  const dropLbl  = document.getElementById('opp-drop-label');
+  const selDiv   = document.getElementById('opp-file-selected');
+  const fileInp  = document.getElementById('opp-file-input');
+  if (expanded) expanded.style.display = 'none';
+  if (btn) {
+    btn.textContent = '+ Step 2 — Upload Opportunity Register (optional)';
+    btn.style.background  = '#e6f4f4';
+    btn.style.color       = '#1A7A7A';
+    btn.style.borderStyle = 'dashed';
+  }
+  if (dropLbl) dropLbl.textContent = 'Tap to upload NP Register (Excel)';
+  if (selDiv)  { selDiv.style.display = 'none'; selDiv.textContent = ''; }
+  if (fileInp) fileInp.value = '';
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -546,6 +642,41 @@ async function startGenerate() {
         else showToast('⚠ Report not saved (storage full?)');
       })
       .catch(e => { showToast('⚠ Save failed: ' + (e && e.message || e)); });
+
+    // ── v55: Opportunity Report pipeline ────────────────────────
+    if (_oppFileBuffer && typeof ingestOpportunity === 'function') {
+      try {
+        setStep('Building Opportunity Report…', 95);
+        const sector = 'jewellery';
+        const { cleanRows, validation, storeName: oppStore }
+          = ingestOpportunity(_oppFileBuffer, sector);
+
+        if (cleanRows && cleanRows.length > 0) {
+          const oppResults  = runAll(cleanRows, validation, sector);
+          const genDate     = new Date().toLocaleDateString('en-IN',
+            { day: '2-digit', month: 'short', year: 'numeric' });
+          const displayName = oppStore || saved.storeName || 'Store';
+
+          const oppContainer = document.getElementById('opp-report-container');
+          if (oppContainer) {
+            oppContainer.style.display = 'block';
+            if (typeof oppInjectCSS === 'function') oppInjectCSS();
+            renderOppReport(oppResults, displayName, 'opp-report-container', genDate);
+            console.log('[OPP v55] Opportunity Report rendered. Records:',
+              oppResults.overview.total_footfalls);
+            showToast(`Opportunity Report ready — ${oppResults.overview.p1_count} to call today`);
+          }
+        } else {
+          console.warn('[OPP v55] No records after ingestion — Opportunity Report skipped');
+          showToast('⚠ Opportunity file had no readable records');
+        }
+      } catch(oppErr) {
+        // Non-fatal — POS report is already showing correctly
+        console.error('[OPP v55] Opportunity pipeline error:', oppErr);
+        showToast('⚠ Opportunity Report could not be generated');
+      }
+    }
+    // ── END v55 Opportunity Report ───────────────────────────────
 
   } catch(err) {
     console.error(err);
