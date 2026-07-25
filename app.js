@@ -195,6 +195,13 @@ function showScreen(id) {
   if (rptHeader) rptHeader.style.display = onReport ? '' : 'none';
   if (tabBar)    tabBar.style.display    = onReport ? '' : 'none';
   if (filterMnt) filterMnt.style.display = onReport ? '' : 'none';
+  // When leaving report screen, reset to POS view so next open is clean
+  if (!onReport) {
+    const vPos = document.getElementById('view-pos');
+    const vOpp = document.getElementById('view-opp');
+    if (vPos) vPos.style.display = '';
+    if (vOpp) vOpp.style.display = 'none';
+  }
   // brand-footer shows on ALL screens — never hidden
 }
 
@@ -619,21 +626,51 @@ function _oppResetUI() {
   if (dropLbl) dropLbl.textContent = 'Tap to upload NP Register (Excel)';
   if (selDiv)  { selDiv.classList.add('hidden'); selDiv.textContent = ''; }
   if (fileInp) fileInp.value = '';
-  // Hide Opportunity tab
-  const oppTabBtn = document.getElementById('tab-btn-opp');
-  if (oppTabBtn) oppTabBtn.style.display = 'none';
+  // Hide toggle bar and reset to POS view
+  _oppHideToggleBar();
 }
 
-// Scroll to Opportunity Report when tab is tapped (Fix 3)
-function oppScrollToReport() {
-  const container = document.getElementById('opp-report-container');
-  if (container && container.style.display !== 'none') {
-    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+// ── Report view toggle (v55) ─────────────────────────────────────
+// switchReportView('pos') or switchReportView('opp')
+// Toggle bar only appears when both POS + Opportunity reports are present.
+function switchReportView(view) {
+  const viewPos = document.getElementById('view-pos');
+  const viewOpp = document.getElementById('view-opp');
+  const btnPos  = document.getElementById('toggle-btn-pos');
+  const btnOpp  = document.getElementById('toggle-btn-opp');
+  const filterBar = document.getElementById('siFilterBarMount');
+
+  if (!viewPos || !viewOpp) return;
+
+  if (view === 'pos') {
+    viewPos.style.display = '';
+    viewOpp.style.display = 'none';
+    if (btnPos) btnPos.classList.add('active');
+    if (btnOpp) btnOpp.classList.remove('active');
+    if (filterBar) filterBar.style.display = '';
+  } else {
+    viewPos.style.display = 'none';
+    viewOpp.style.display = '';
+    if (btnPos) btnPos.classList.remove('active');
+    if (btnOpp) btnOpp.classList.add('active');
+    if (filterBar) filterBar.style.display = 'none';
+    // Scroll to top of opp report
+    window.scrollTo(0, 0);
   }
-  // Highlight the tab as active briefly
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  const oppTabBtn = document.getElementById('tab-btn-opp');
-  if (oppTabBtn) oppTabBtn.classList.add('active');
+}
+
+// Show the toggle bar (called after Opp report renders successfully)
+function _oppShowToggleBar() {
+  const bar = document.getElementById('report-toggle-bar');
+  if (bar) bar.style.display = 'flex';
+}
+
+// Hide the toggle bar (called on New Report reset)
+function _oppHideToggleBar() {
+  const bar = document.getElementById('report-toggle-bar');
+  if (bar) bar.style.display = 'none';
+  // Ensure POS view is shown
+  switchReportView('pos');
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -715,10 +752,9 @@ async function startGenerate() {
             renderOppReport(oppResults, displayName, 'opp-report-container', genDate);
             console.log('[OPP v55] Opportunity Report rendered. Records:',
               oppResults.overview.total_footfalls);
-            // Show Opportunity tab in tab bar
-            const oppTabBtn = document.getElementById('tab-btn-opp');
-            if (oppTabBtn) oppTabBtn.style.display = '';
-            showToast(`Opportunity Report ready — ${oppResults.overview.p1_count} to call today`);
+            // Show toggle bar in report header
+            _oppShowToggleBar();
+            showToast('Opportunity Report ready — tap toggle to view');
           }
         } else {
           console.warn('[OPP v55] No records after ingestion — Opportunity Report skipped');
