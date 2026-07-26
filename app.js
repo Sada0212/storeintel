@@ -754,6 +754,9 @@ function switchReportView(view) {
     if (btnPos) { btnPos.classList.remove('active'); }
     if (btnOpp) { btnOpp.classList.add('active'); }
     if (filterBar) filterBar.style.display = 'none';
+    // Scroll the screen-report div to top so opp content is visible
+    const screenReport = document.getElementById('screen-report');
+    if (screenReport) screenReport.scrollTop = 0;
     window.scrollTo(0, 0);
   }
 }
