@@ -195,8 +195,9 @@ function showScreen(id) {
   if (rptHeader) rptHeader.style.display = onReport ? '' : 'none';
   if (tabBar)    tabBar.style.display    = onReport ? '' : 'none';
   if (filterMnt) filterMnt.style.display = onReport ? '' : 'none';
-  // When leaving report screen, reset to POS view so next open is clean
+  // When leaving report screen, reset to POS view
   if (!onReport) {
+    _currentView = 'pos';
     const vPos = document.getElementById('view-pos');
     const vOpp = document.getElementById('view-opp');
     if (vPos) vPos.style.display = '';
@@ -710,6 +711,46 @@ function _oppResetUI() {
   _oppHideToggleBar();
 }
 
+// ── Report view toggle — topbar single button (v56) ──────────────
+let _currentView = 'pos';
+
+function toggleReportView() {
+  _currentView = (_currentView === 'pos') ? 'opp' : 'pos';
+  _applyReportView(_currentView);
+}
+
+function _applyReportView(view) {
+  const viewPos   = document.getElementById('view-pos');
+  const viewOpp   = document.getElementById('view-opp');
+  const filterBar = document.getElementById('siFilterBarMount');
+  const toggleBtn = document.getElementById('view-toggle-btn');
+  if (!viewPos || !viewOpp) return;
+  if (view === 'pos') {
+    viewPos.style.display = '';
+    viewOpp.style.display = 'none';
+    if (filterBar) filterBar.style.display = '';
+    if (toggleBtn) {
+      toggleBtn.textContent        = '📊 Sales';
+      toggleBtn.style.color        = '#c9973a';
+      toggleBtn.style.background   = 'rgba(201,151,58,0.15)';
+      toggleBtn.style.borderColor  = 'rgba(201,151,58,0.4)';
+    }
+  } else {
+    viewPos.style.display = 'none';
+    viewOpp.style.display = 'block';
+    if (filterBar) filterBar.style.display = 'none';
+    if (toggleBtn) {
+      toggleBtn.textContent        = '📋 Opportunity';
+      toggleBtn.style.color        = '#4ABFBF';
+      toggleBtn.style.background   = 'rgba(26,122,122,0.2)';
+      toggleBtn.style.borderColor  = 'rgba(74,191,191,0.5)';
+    }
+    const sr = document.getElementById('screen-report');
+    if (sr) sr.scrollTop = 0;
+    window.scrollTo(0, 0);
+  }
+}
+
 // ── Mapping review tab switcher (v55) ────────────────────────────
 function switchMappingTab(tab) {
   const posView  = document.getElementById('mr-view-pos');
@@ -730,49 +771,24 @@ function switchMappingTab(tab) {
   }
 }
 
-// ── Report view toggle (v55) ─────────────────────────────────────
-// switchReportView('pos') or switchReportView('opp')
-// Toggle bar only appears when both POS + Opportunity reports are present.
-function switchReportView(view) {
-  const viewPos = document.getElementById('view-pos');
-  const viewOpp = document.getElementById('view-opp');
-  const btnPos  = document.getElementById('toggle-btn-pos');
-  const btnOpp  = document.getElementById('toggle-btn-opp');
-  const filterBar = document.getElementById('siFilterBarMount');
+// switchReportView replaced by toggleReportView (v56)
 
-  if (!viewPos || !viewOpp) return;
-
-  if (view === 'pos') {
-    viewPos.style.display = '';
-    viewOpp.style.display = 'none';
-    if (btnPos) { btnPos.classList.add('active'); }
-    if (btnOpp) { btnOpp.classList.remove('active'); }
-    if (filterBar) filterBar.style.display = '';
-  } else {
-    viewPos.style.display = 'none';
-    viewOpp.style.display = 'block';
-    if (btnPos) { btnPos.classList.remove('active'); }
-    if (btnOpp) { btnOpp.classList.add('active'); }
-    if (filterBar) filterBar.style.display = 'none';
-    // Scroll the screen-report div to top so opp content is visible
-    const screenReport = document.getElementById('screen-report');
-    if (screenReport) screenReport.scrollTop = 0;
-    window.scrollTo(0, 0);
-  }
-}
 
 // Show the toggle bar (called after Opp report renders successfully)
 function _oppShowToggleBar() {
-  const bar = document.getElementById('report-toggle-bar');
-  if (bar) bar.style.display = 'flex';
+  // Show the topbar toggle button (v56 — single button in top bar)
+  const btn = document.getElementById('view-toggle-btn');
+  if (btn) btn.style.display = '';
+  _currentView = 'pos'; // default to Sales view when Opp first loads
+  _applyReportView('pos');
 }
 
 // Hide the toggle bar (called on New Report reset)
 function _oppHideToggleBar() {
-  const bar = document.getElementById('report-toggle-bar');
-  if (bar) bar.style.display = 'none';
-  // Ensure POS view is shown
-  switchReportView('pos');
+  const btn = document.getElementById('view-toggle-btn');
+  if (btn) btn.style.display = 'none';
+  _currentView = 'pos';
+  _applyReportView('pos');
 }
 
 // ══════════════════════════════════════════════════════════════════

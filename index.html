@@ -23,6 +23,19 @@
       <span class="topbar-name">Store<span>Intel</span></span>
     </div>
     <div class="topbar-status">
+      <button id="view-toggle-btn" 
+        onclick="toggleReportView()"
+        style="display:none;
+               background:rgba(201,151,58,0.15);
+               border:1px solid rgba(201,151,58,0.4);
+               border-radius:14px;padding:4px 10px;
+               color:#c9973a;font-family:inherit;
+               font-size:11px;font-weight:700;
+               cursor:pointer;white-space:nowrap;
+               margin-right:8px;letter-spacing:0.3px;
+               transition:all 0.2s">
+        📊 Sales
+      </button>
       <div class="status-dot" id="status-dot"></div>
       <span id="status-label">Checking…</span>
     </div>
@@ -365,15 +378,7 @@
       </div>
     </div>
 
-    <!-- Report toggle pill — compact, only when both uploaded (v56) -->
-    <div id="report-toggle-bar" style="display:none">
-      <div class="rpt-toggle-pill">
-        <button id="toggle-btn-pos" class="rpt-pill-btn active"
-          onclick="switchReportView('pos')">📊 Sales</button>
-        <button id="toggle-btn-opp" class="rpt-pill-btn"
-          onclick="switchReportView('opp')">📋 Opportunity</button>
-      </div>
-    </div>
+<!-- report-toggle-bar removed v56 — toggle now in topbar -->
 
     <!-- v40: Date filter bar (populated by DateFilter.init) -->
     <div id="siFilterBarMount"></div>
