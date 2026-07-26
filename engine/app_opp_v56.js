@@ -257,41 +257,7 @@ function oppClearMapping() {
       color: rgba(255,255,255,0.8);
     }
 
-    /* ── Report toggle pill (v56) ───────────────────────── */
-    #report-toggle-bar {
-      padding: 8px 16px;
-      display: flex;
-      align-items: center;
-      background: var(--navy2, #1a2e4a);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .rpt-toggle-pill {
-      display: inline-flex;
-      background: rgba(255,255,255,0.07);
-      border-radius: 20px;
-      padding: 3px;
-      gap: 2px;
-    }
-    .rpt-pill-btn {
-      padding: 6px 14px;
-      border-radius: 17px;
-      border: none;
-      background: transparent;
-      color: rgba(255,255,255,0.5);
-      font-family: inherit;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.18s;
-      white-space: nowrap;
-    }
-    .rpt-pill-btn.active {
-      background: var(--teal, #1A7A7A);
-      color: #fff;
-    }
-    .rpt-pill-btn:not(.active):hover {
-      color: rgba(255,255,255,0.8);
-    }
+    /* pill toggle CSS removed — toggle now in topbar (v56) */
   `;
   document.head.appendChild(style);
 })();
