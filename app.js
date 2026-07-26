@@ -716,6 +716,7 @@ let _currentView = 'pos';
 
 function toggleReportView() {
   _currentView = (_currentView === 'pos') ? 'opp' : 'pos';
+  console.log('[OPP v56] toggleReportView → switching to:', _currentView);
   _applyReportView(_currentView);
 }
 
@@ -724,7 +725,11 @@ function _applyReportView(view) {
   const viewOpp   = document.getElementById('view-opp');
   const filterBar = document.getElementById('siFilterBarMount');
   const toggleBtn = document.getElementById('view-toggle-btn');
-  if (!viewPos || !viewOpp) return;
+  console.log('[OPP v56] _applyReportView:', view,
+    'viewPos:', !!viewPos, 'viewOpp:', !!viewOpp,
+    'oppContainer innerHTML length:', 
+    document.getElementById('opp-report-container')?.innerHTML?.length || 0);
+  if (!viewPos || !viewOpp) { console.error('[OPP v56] view divs missing!'); return; }
   if (view === 'pos') {
     viewPos.style.display = '';
     viewOpp.style.display = 'none';
@@ -738,6 +743,8 @@ function _applyReportView(view) {
   } else {
     viewPos.style.display = 'none';
     viewOpp.style.display = 'block';
+    // Force repaint
+    viewOpp.offsetHeight;
     if (filterBar) filterBar.style.display = 'none';
     if (toggleBtn) {
       toggleBtn.textContent        = '📋 Opportunity';
@@ -748,6 +755,9 @@ function _applyReportView(view) {
     const sr = document.getElementById('screen-report');
     if (sr) sr.scrollTop = 0;
     window.scrollTo(0, 0);
+    // Debug: show content length in toast
+    const oppLen = document.getElementById('opp-report-container')?.innerHTML?.length || 0;
+    showToast('Opp view: ' + (oppLen > 100 ? oppLen + ' chars — scroll up' : 'empty — not rendered'));
   }
 }
 
