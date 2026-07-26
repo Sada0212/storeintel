@@ -265,6 +265,13 @@ function oppInjectCSS() {
       .replace(/\.opp-page/g,  '#opp-report-container .opp-page')
       .replace(/\.opp-rpt-header/g, '#opp-report-container .opp-rpt-header')
       .replace(/\.opp-footer/g, '#opp-report-container .opp-footer');
+    // PWA mode: hide opp-nav (PWA has its own header) + fix sticky positions
+    scoped += [
+      '#opp-report-container .opp-nav { display:none !important; }',
+      '#opp-report-container .opp-tab-nav { position:sticky; top:0; z-index:100; }',
+      '#opp-report-container .opp-page { padding:16px 16px 48px; max-width:100%; }',
+      '#opp-report-container .opp-footer { margin-top:16px; padding:16px; }',
+    ].join(' ');
     s.textContent = scoped;
   } else {
     s.textContent = OPP_CSS;
