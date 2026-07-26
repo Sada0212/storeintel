@@ -757,7 +757,7 @@ function _applyReportView(view) {
     window.scrollTo(0, 0);
     // Debug: show content length in toast
     const oppLen = document.getElementById('opp-report-container')?.innerHTML?.length || 0;
-    showToast('Opp view: ' + (oppLen > 100 ? oppLen + ' chars — scroll up' : 'empty — not rendered'));
+    console.log('[OPP v56] opp container length:', oppLen);
   }
 }
 
