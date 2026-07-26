@@ -1098,6 +1098,15 @@ document.addEventListener('DOMContentLoaded', () => {
   initMappingReviewScreen();
   initHomeScreen();
 
+  // Wire up topbar view toggle button (v56)
+  const _toggleBtn = document.getElementById('view-toggle-btn');
+  if (_toggleBtn) {
+    _toggleBtn.addEventListener('click', function() {
+      console.log('[OPP v56] toggle btn clicked, _currentView=', _currentView);
+      toggleReportView();
+    });
+  }
+
   // Error screen buttons
   // Drawer screen buttons
   document.getElementById('btn-drawer-upload')?.addEventListener('click', () => {
