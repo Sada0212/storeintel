@@ -198,9 +198,7 @@ function showScreen(id) {
   // When leaving report screen, reset to POS view
   if (!onReport) {
     _currentView = 'pos';
-    const vPos = document.getElementById('view-pos');
     const vOpp = document.getElementById('view-opp');
-    if (vPos) vPos.style.display = '';
     if (vOpp) vOpp.style.display = 'none';
   }
   // brand-footer shows on ALL screens — never hidden
@@ -721,43 +719,34 @@ function toggleReportView() {
 }
 
 function _applyReportView(view) {
-  const viewPos   = document.getElementById('view-pos');
   const viewOpp   = document.getElementById('view-opp');
   const filterBar = document.getElementById('siFilterBarMount');
   const toggleBtn = document.getElementById('view-toggle-btn');
-  console.log('[OPP v56] _applyReportView:', view,
-    'viewPos:', !!viewPos, 'viewOpp:', !!viewOpp,
-    'oppContainer innerHTML length:', 
-    document.getElementById('opp-report-container')?.innerHTML?.length || 0);
-  if (!viewPos || !viewOpp) { console.error('[OPP v56] view divs missing!'); return; }
+  if (!viewOpp) return;
+
   if (view === 'pos') {
-    viewPos.style.display = '';
+    // Hide the Opp overlay — Sales content was never hidden so it's intact
     viewOpp.style.display = 'none';
     if (filterBar) filterBar.style.display = '';
     if (toggleBtn) {
-      toggleBtn.textContent        = '📊 Sales';
-      toggleBtn.style.color        = '#c9973a';
-      toggleBtn.style.background   = 'rgba(201,151,58,0.15)';
-      toggleBtn.style.borderColor  = 'rgba(201,151,58,0.4)';
+      toggleBtn.textContent       = '📊 Sales';
+      toggleBtn.style.color       = '#c9973a';
+      toggleBtn.style.background  = 'rgba(201,151,58,0.15)';
+      toggleBtn.style.borderColor = 'rgba(201,151,58,0.4)';
     }
+    window.scrollTo(0, 0);
   } else {
-    viewPos.style.display = 'none';
+    // Show Opp overlay — Sales stays in DOM underneath (no content loss)
     viewOpp.style.display = 'block';
-    // Force repaint
-    viewOpp.offsetHeight;
     if (filterBar) filterBar.style.display = 'none';
     if (toggleBtn) {
-      toggleBtn.textContent        = '📋 Opportunity';
-      toggleBtn.style.color        = '#4ABFBF';
-      toggleBtn.style.background   = 'rgba(26,122,122,0.2)';
-      toggleBtn.style.borderColor  = 'rgba(74,191,191,0.5)';
+      toggleBtn.textContent       = '📋 Opportunity';
+      toggleBtn.style.color       = '#4ABFBF';
+      toggleBtn.style.background  = 'rgba(26,122,122,0.2)';
+      toggleBtn.style.borderColor = 'rgba(74,191,191,0.5)';
     }
-    const sr = document.getElementById('screen-report');
-    if (sr) sr.scrollTop = 0;
+    viewOpp.scrollTop = 0;
     window.scrollTo(0, 0);
-    // Debug: show content length in toast
-    const oppLen = document.getElementById('opp-report-container')?.innerHTML?.length || 0;
-    console.log('[OPP v56] opp container length:', oppLen);
   }
 }
 
