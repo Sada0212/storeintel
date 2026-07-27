@@ -198,8 +198,10 @@ function showScreen(id) {
   // When leaving report screen, reset to POS view
   if (!onReport) {
     _currentView = 'pos';
-    const vOpp = document.getElementById('view-opp');
-    if (vOpp) vOpp.style.display = 'none';
+    // Show all POS tabs, hide Opp tabs
+    document.querySelectorAll('[data-report="opp"]').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-btn:not([data-report])').forEach(b => b.style.display = '');
+    document.querySelectorAll('.tab-panel:not([data-report])').forEach(p => p.style.display = '');
   }
   // brand-footer shows on ALL screens — never hidden
 }
@@ -704,7 +706,8 @@ function _oppResetUI() {
   if (selDiv)   { selDiv.classList.add('hidden'); selDiv.textContent = ''; }
   if (fileInp)  fileInp.value = '';
   if (oppCont)  oppCont.innerHTML = '';
-  if (viewOpp)  viewOpp.style.display = 'none';
+  // Remove old opp tabs from tab bar and panels
+  document.querySelectorAll('[data-report="opp"]').forEach(el => el.remove());
   // Hide toggle bar and reset to POS view
   _oppHideToggleBar();
 }
@@ -719,14 +722,17 @@ function toggleReportView() {
 }
 
 function _applyReportView(view) {
-  const viewOpp   = document.getElementById('view-opp');
   const filterBar = document.getElementById('siFilterBarMount');
   const toggleBtn = document.getElementById('view-toggle-btn');
-  if (!viewOpp) return;
 
   if (view === 'pos') {
-    // Hide the Opp overlay — Sales content was never hidden so it's intact
-    viewOpp.style.display = 'none';
+    // Show POS tabs, hide Opp tabs, show first POS tab active
+    document.querySelectorAll('[data-report="opp"]').forEach(el => {
+      el.style.display = 'none';
+      if (el.classList.contains('tab-panel')) el.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-btn:not([data-report])').forEach(b => b.style.display = '');
+    document.querySelectorAll('.tab-panel:not([data-report])').forEach(p => p.style.display = '');
     if (filterBar) filterBar.style.display = '';
     if (toggleBtn) {
       toggleBtn.textContent       = '📊 Sales';
@@ -734,10 +740,28 @@ function _applyReportView(view) {
       toggleBtn.style.background  = 'rgba(201,151,58,0.15)';
       toggleBtn.style.borderColor = 'rgba(201,151,58,0.4)';
     }
-    window.scrollTo(0, 0);
+    // Restore active POS tab
+    const activePos = document.querySelector('.tab-btn.active:not([data-report])');
+    if (!activePos) {
+      const firstPosBtn = document.querySelector('.tab-btn:not([data-report])');
+      if (firstPosBtn) firstPosBtn.click();
+    }
   } else {
-    // Show Opp overlay — Sales stays in DOM underneath (no content loss)
-    viewOpp.style.display = 'block';
+    // Show Opp tabs, hide POS tabs
+    document.querySelectorAll('.tab-btn:not([data-report])').forEach(b => b.style.display = 'none');
+    document.querySelectorAll('.tab-panel:not([data-report])').forEach(p => {
+      p.style.display = 'none'; p.classList.remove('active');
+    });
+    document.querySelectorAll('[data-report="opp"]').forEach(el => el.style.display = '');
+    // Activate first opp tab
+    const firstOppBtn = document.querySelector('.tab-btn[data-report="opp"]');
+    const firstOppPanel = document.querySelector('.tab-panel[data-report="opp"]');
+    if (firstOppBtn && firstOppPanel) {
+      document.querySelectorAll('.tab-btn[data-report="opp"]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel[data-report="opp"]').forEach(p => p.classList.remove('active'));
+      firstOppBtn.classList.add('active');
+      firstOppPanel.classList.add('active');
+    }
     if (filterBar) filterBar.style.display = 'none';
     if (toggleBtn) {
       toggleBtn.textContent       = '📋 Opportunity';
@@ -745,7 +769,6 @@ function _applyReportView(view) {
       toggleBtn.style.background  = 'rgba(26,122,122,0.2)';
       toggleBtn.style.borderColor = 'rgba(74,191,191,0.5)';
     }
-    viewOpp.scrollTop = 0;
     window.scrollTo(0, 0);
   }
 }
@@ -787,7 +810,10 @@ function _oppHideToggleBar() {
   const btn = document.getElementById('view-toggle-btn');
   if (btn) btn.style.display = 'none';
   _currentView = 'pos';
-  _applyReportView('pos');
+  // Remove opp tabs, show pos tabs
+  document.querySelectorAll('[data-report="opp"]').forEach(el => el.remove());
+  document.querySelectorAll('.tab-btn:not([data-report])').forEach(b => b.style.display = '');
+  document.querySelectorAll('.tab-panel:not([data-report])').forEach(p => p.style.display = '');
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -863,7 +889,7 @@ async function startGenerate() {
           const oppContainer = document.getElementById('opp-report-container');
           if (oppContainer) {
             if (typeof oppInjectCSS === 'function') oppInjectCSS();
-            renderOppReport(oppResults, displayName, 'opp-report-container', genDate);
+            renderOppReportPWA(oppResults, displayName);
             _oppShowToggleBar();
             showToast('Opportunity Report ready — tap toggle above to view');
             console.log('[OPP v56] Rendered:', oppResults.overview.total_footfalls, 'records');

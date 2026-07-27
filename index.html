@@ -379,8 +379,6 @@
 
 <!-- report-toggle-bar removed v56 — toggle now in topbar -->
 
-    <!-- POS view — hidden when Opportunity view active (v56) -->
-    <div id="view-pos">
     <!-- v40: Date filter bar (populated by DateFilter.init) -->
     <div id="siFilterBarMount"></div>
 
@@ -448,14 +446,8 @@
 
 
     </div><!-- /tab-panels -->
-    </div><!-- /#view-pos -->
 
-    <!-- Opportunity Report view (v56 toggle) -->
-    <div id="view-opp" style="display:none;
-      position:fixed;top:52px;left:0;right:0;bottom:0;
-      z-index:150;overflow-y:auto;background:#0f1b2d">
-      <div id="opp-report-container"></div>
-    </div>
+
 
   </div>
 
@@ -488,7 +480,7 @@
 <!-- Opportunity Report engine (v55) -->
 <script src="engine/ingestion_opp_v1.1.js"></script>
 <script src="engine/analysis_opp_v1.1.js"></script>
-<script src="engine/renderer_opp_v1.0.js"></script>
+<script src="engine/renderer_opp_pwa_v1.0.js"></script>
 <script src="engine/app_opp_v56.js"></script>
 </body>
 </html>
