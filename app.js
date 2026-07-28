@@ -1,7 +1,23 @@
-/* StoreIntel PWA — app.js v56
+/* StoreIntel PWA — app.js v57
    Two-phase flow:
    SETUP (once): store name → upload mapping.xlsx → review → save
    MONTHLY:      pick POS excel + optional NP file → generate report
+
+   v57 CHANGE FROM v56:
+   Root cause of "Opportunity Report never appears, toggle button never shows"
+   — the Opportunity render block was gated behind:
+       const oppContainer = document.getElementById('opp-report-container');
+       if (oppContainer) { ...render... }
+   This element does not exist anywhere in index.html. renderOppReportPWA()
+   (the PWA-native renderer, v1.1) writes directly into .tab-bar and
+   .tab-panels — it never needed this container. Because the element was
+   always null, the entire render block silently never executed: no error,
+   no log, no toast, no toggle button. Confirmed by console output ending
+   cleanly right after "[OPP INGESTION] Complete" with zero further
+   Opportunity-related log lines.
+   FIX: removed the dead container check. Render block now runs directly
+   off successful ingestion, matching how renderOppReportPWA() actually
+   works.
 */
 'use strict';
 
@@ -602,9 +618,8 @@ function initHomeScreen() {
     const filterMount = document.getElementById('siFilterBarMount');
     if (filterMount) filterMount.innerHTML = '';
 
-    // Clear Opportunity Report container
-    const oppContainer = document.getElementById('opp-report-container');
-    if (oppContainer) { oppContainer.innerHTML = ''; oppContainer.style.display = 'none'; }
+    // v57: opp-report-container no longer used by renderOppReportPWA —
+    // opp tabs/panels are removed via _oppResetUI() above instead.
 
     // v48: go to drawer if saved reports exist, else home
     const savedForNew = loadFromStorage();
@@ -692,8 +707,6 @@ function _oppResetUI() {
   const dropLbl   = document.getElementById('opp-drop-label');
   const selDiv    = document.getElementById('opp-file-selected');
   const fileInp   = document.getElementById('opp-file-input');
-  const oppCont   = document.getElementById('opp-report-container');
-  const viewOpp   = document.getElementById('view-opp');
   if (expanded) expanded.style.display = 'none';
   if (btn) {
     btn.textContent       = '+ Step 2 — Upload Opportunity Register (optional)';
@@ -705,7 +718,6 @@ function _oppResetUI() {
   if (dropLbl)  dropLbl.textContent = 'Tap to upload NP Register (Excel)';
   if (selDiv)   { selDiv.classList.add('hidden'); selDiv.textContent = ''; }
   if (fileInp)  fileInp.value = '';
-  if (oppCont)  oppCont.innerHTML = '';
   // Remove old opp tabs from tab bar and panels
   document.querySelectorAll('[data-report="opp"]').forEach(el => el.remove());
   // Hide toggle bar and reset to POS view
@@ -874,7 +886,11 @@ async function startGenerate() {
       })
       .catch(e => { showToast('⚠ Save failed: ' + (e && e.message || e)); });
 
-    // ── v56: Opportunity Report pipeline ────────────────────────
+    // ── v57: Opportunity Report pipeline ────────────────────────
+    // FIX: removed dead `document.getElementById('opp-report-container')`
+    // gate. renderOppReportPWA() writes directly to .tab-bar/.tab-panels
+    // and never used that container — the check was always false,
+    // silently blocking this entire block on every run.
     if (_oppFileBuffer && typeof ingestOpportunity === 'function') {
       try {
         const sector = 'jewellery';
@@ -886,19 +902,17 @@ async function startGenerate() {
           const genDate     = new Date().toLocaleDateString('en-IN',
             { day: '2-digit', month: 'short', year: 'numeric' });
           const displayName = oppStore || saved.storeName || 'Store';
-          const oppContainer = document.getElementById('opp-report-container');
-          if (oppContainer) {
-            if (typeof oppInjectCSS === 'function') oppInjectCSS();
-            renderOppReportPWA(oppResults, displayName);
-            _oppShowToggleBar();
-            showToast('Opportunity Report ready — tap toggle above to view');
-            console.log('[OPP v56] Rendered:', oppResults.overview.total_footfalls, 'records');
-          }
+
+          if (typeof oppInjectCSS === 'function') oppInjectCSS();
+          renderOppReportPWA(oppResults, displayName);
+          _oppShowToggleBar();
+          showToast('Opportunity Report ready — tap toggle above to view');
+          console.log('[OPP v57] Rendered:', oppResults.overview.total_footfalls, 'records');
         } else {
           showToast('⚠ Opportunity file: no readable records found');
         }
       } catch(oppErr) {
-        console.error('[OPP v56] Error:', oppErr.message || oppErr);
+        console.error('[OPP v57] Error:', oppErr.message || oppErr);
         showToast('⚠ Opp error: ' + (oppErr.message || 'unknown'));
       }
     } else if (_oppFileBuffer) {

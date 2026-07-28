@@ -1,14 +1,18 @@
 /**
  * StoreIntel Service Worker
- * Version: v56
- * Date:    2026-07-07
- * Change:  Opportunity Report engine files added to cache.
- *          CACHE_NAME bumped from storeintel-v54 → storeintel-v56.
- *          On next online open, old cache is deleted and v55 is installed.
+ * Version: v57
+ * Date:    2026-07-28
+ * Change:  CACHE_NAME bumped storeintel-v55 → storeintel-v57 (forces old
+ *          cached files, including the broken app.js/renderer, to be
+ *          discarded on next load).
+ *          FILES_TO_CACHE corrected — it was still listing
+ *          'renderer_opp_v1.0.js' and 'app_opp_v55.js', which do not match
+ *          the files actually referenced in index.html
+ *          ('renderer_opp_pwa_v1.1.js' and 'app_opp_v56.js'). This mismatch
+ *          meant the service worker was never caching the right files for
+ *          offline use — now fixed to match index.html exactly.
  */
-
-const CACHE_NAME = 'storeintel-v56';
-
+const CACHE_NAME = 'storeintel-v57';
 const FILES_TO_CACHE = [
   '/',
   '/index.html',
@@ -21,28 +25,26 @@ const FILES_TO_CACHE = [
   '/engine/analysis.js',
   '/engine/renderer.js',
   '/engine/date_filter.js',
-  // Opportunity Report engine (new v55)
+  // Opportunity Report engine (v57 — corrected filenames)
   '/engine/ingestion_opp_v1.1.js',
   '/engine/analysis_opp_v1.1.js',
-  '/engine/renderer_opp_v1.0.js',
+  '/engine/renderer_opp_pwa_v1.1.js',
   '/engine/app_opp_v56.js',
   // Icons
   '/icons/icon-192.png',
   '/icons/icon-512.png',
 ];
-
 // ── Install: cache all files ──────────────────────────────────────
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log('[SW v55] Caching app shell and Opp engine files');
+      console.log('[SW v57] Caching app shell and Opp engine files');
       return cache.addAll(FILES_TO_CACHE);
     })
   );
   // Take control immediately — don't wait for old SW to die
   self.skipWaiting();
 });
-
 // ── Activate: delete old caches ───────────────────────────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
@@ -51,7 +53,7 @@ self.addEventListener('activate', event => {
         cacheNames
           .filter(name => name !== CACHE_NAME)
           .map(name => {
-            console.log('[SW v55] Deleting old cache:', name);
+            console.log('[SW v57] Deleting old cache:', name);
             return caches.delete(name);
           })
       );
@@ -60,17 +62,14 @@ self.addEventListener('activate', event => {
   // Take control of all open clients
   self.clients.claim();
 });
-
 // ── Fetch: cache-first, network fallback ─────────────────────────
 self.addEventListener('fetch', event => {
   // Only handle same-origin GET requests
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith(self.location.origin)) return;
-
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
-
       return fetch(event.request).then(response => {
         // Cache valid responses
         if (response && response.status === 200 && response.type === 'basic') {
