@@ -1,10 +1,19 @@
-/* StoreIntel PWA — style.css v57
+/* StoreIntel PWA — style.css v59
    Brand: Navy #0f1b2d | Amber #c9973a
    Mobile-first. No framework. Works offline.
    v57: Added Opportunity Report layout styles at end of file —
    renderer_opp_pwa_v1.1.js uses class names (.kpi, .sec-title,
    .callout, .bar-row, .tbl-wrap, etc.) that previously had no CSS,
-   causing Opp tabs to render as unstyled plain text. */
+   causing Opp tabs to render as unstyled plain text.
+   v58: Added print-media rules so PDF export shows only the
+   currently active report type (POS or Opportunity), not both.
+   v59: (1) Moderate chrome-level color variation — tab-bar active
+   state and rpt-header accent border now switch teal/amber based on
+   body[data-report-view], matching how the web view differentiates
+   POS (gold) vs Opportunity (teal) through its nav-bar and tab-bar,
+   translated to the PWA's dark theme. (2) Styles for the new
+   Opportunity contact-list priority filter bar (Call Today/Follow
+   Up/When Stocked/All), matching the web view's filter buttons. */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1600,11 +1609,12 @@ html, body {
 ════════════════════════════════════════════════════════════ */
 
 :root {
-  --teal:      #1A7A7A;
-  --teal-dim:  rgba(26,122,122,0.18);
-  --teal-bg:   rgba(26,122,122,0.10);
-  --gold-bg:   #2a220f;
-  --muted:     var(--grey);
+  --teal:       #1A7A7A;
+  --teal-light: #4ABFBF;
+  --teal-dim:   rgba(26,122,122,0.18);
+  --teal-bg:    rgba(26,122,122,0.10);
+  --gold-bg:    #2a220f;
+  --muted:      var(--grey);
 }
 
 /* Page wrapper inside each Opp tab-scroll */
@@ -1787,4 +1797,90 @@ html, body {
   .bar-lbl {
     flex-basis: 110px;
   }
+}
+
+/* ════════════════════════════════════════════════════════════
+   PDF PRINT — show only the ACTIVE report type (v58)
+   Previously @media print forced every .tab-panel to display,
+   with no distinction between POS and Opportunity content — so
+   the PDF always included both. app.js now stamps the current
+   view onto <body data-report-view="pos|opp">; these rules use
+   that to hide whichever type is NOT currently on screen.
+   Attribute selectors here outrank the plain .tab-panel rule
+   earlier in this file regardless of source order, so this holds
+   even though it's appended at the end.
+════════════════════════════════════════════════════════════ */
+@media print {
+  /* Opportunity view active → hide all non-Opp panels */
+  body[data-report-view="opp"] .tab-panel:not([data-report="opp"]) {
+    display: none !important;
+  }
+  /* POS view active (or attribute unset/default) → hide all Opp panels */
+  body:not([data-report-view="opp"]) .tab-panel[data-report="opp"] {
+    display: none !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODERATE CHROME COLOR VARIATION (v59)
+   Mirrors the web view's approach — POS stays amber/gold-accented,
+   Opportunity switches to teal — but applied to the app's *chrome*
+   (tab-bar active state, report header accent line), not just
+   content, using the body[data-report-view] attribute app.js
+   already sets on every toggle. This closes the gap where the
+   Opp view's tab-bar underline stayed amber even though everything
+   below it was teal-themed.
+════════════════════════════════════════════════════════════ */
+body[data-report-view="opp"] .tab-btn.active {
+  color: var(--teal-light);
+  border-bottom-color: var(--teal);
+}
+
+.rpt-header {
+  border-bottom: 2px solid var(--amber-dim);
+  transition: border-color 0.2s ease;
+}
+body[data-report-view="opp"] .rpt-header {
+  border-bottom: 2px solid var(--teal);
+}
+
+/* ════════════════════════════════════════════════════════════
+   OPPORTUNITY CONTACT LIST — priority filter bar (v59)
+   Matches the web view's 🔴 Call Today / 🟡 Follow Up /
+   ⚪ When Stocked / All buttons above the contact table.
+════════════════════════════════════════════════════════════ */
+.opp-filter-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.opp-filter-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  opacity: 0.55;
+  font-family: inherit;
+  transition: opacity 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.opp-filter-btn:active { transform: scale(0.96); }
+.opp-filter-btn.active {
+  opacity: 1;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+}
+.opp-filter-p1  { background: var(--red); }
+.opp-filter-p2  { background: #8a6010; }
+.opp-filter-p3  { background: #444; }
+.opp-filter-all { background: var(--navy-light); color: var(--white); }
+
+.opp-filter-count {
+  font-size: 11px;
+  color: var(--grey);
+  font-weight: 600;
+  margin-bottom: 8px;
 }
