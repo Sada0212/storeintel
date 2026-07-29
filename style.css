@@ -1,4 +1,4 @@
-/* StoreIntel PWA — style.css v59
+/* StoreIntel PWA — style.css v60
    Brand: Navy #0f1b2d | Amber #c9973a
    Mobile-first. No framework. Works offline.
    v57: Added Opportunity Report layout styles at end of file —
@@ -13,7 +13,10 @@
    POS (gold) vs Opportunity (teal) through its nav-bar and tab-bar,
    translated to the PWA's dark theme. (2) Styles for the new
    Opportunity contact-list priority filter bar (Call Today/Follow
-   Up/When Stocked/All), matching the web view's filter buttons. */
+   Up/When Stocked/All), matching the web view's filter buttons.
+   v60: Added --blue/--green-light/--orange variables matching the
+   web view's Opportunity report palette, so renderer_opp_pwa_v1.3.js
+   can give each KPI its own semantic color instead of flat teal. */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1609,12 +1612,22 @@ html, body {
 ════════════════════════════════════════════════════════════ */
 
 :root {
-  --teal:       #1A7A7A;
-  --teal-light: #4ABFBF;
-  --teal-dim:   rgba(26,122,122,0.18);
-  --teal-bg:    rgba(26,122,122,0.10);
-  --gold-bg:    #2a220f;
-  --muted:      var(--grey);
+  --teal:        #1A7A7A;
+  --teal-light:  #4ABFBF;
+  --teal-dim:    rgba(26,122,122,0.18);
+  --teal-bg:     rgba(26,122,122,0.10);
+  --gold-bg:     #2a220f;
+  --muted:       var(--grey);
+
+  /* v60: matched from the web view's own --blue/--orange/--green hues,
+     with brighter "-light" variants for legibility on this app's dark
+     navy background — the web view's original hex values were tuned
+     for text on a light cream page and read too dim used as-is here. */
+  --blue:        #1a4a8b;
+  --blue-light:  #6FA8E0;
+  --green-light: #4CAF7D;
+  --orange:      #b85c1a;
+  --orange-light:#E29A56;
 }
 
 /* Page wrapper inside each Opp tab-scroll */

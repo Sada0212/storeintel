@@ -1,7 +1,26 @@
-/* StoreIntel PWA — app.js v57
+/* StoreIntel PWA — app.js v60
    Two-phase flow:
    SETUP (once): store name → upload mapping.xlsx → review → save
    MONTHLY:      pick POS excel + optional NP file → generate report
+
+   v60 CHANGE FROM v58:
+   PDF export was still including POS content when printing from the Opp
+   view, even though the screen correctly showed Opp beforehand — the
+   CSS-only @media print filtering (data-report-view attribute) wasn't
+   being honored reliably by the device's print/PDF rendering pass.
+   Fixed by forcing the inactive report type's panels hidden via inline
+   style('display','none','important') directly in JS right before
+   window.print() fires — this is guaranteed to win the CSS cascade
+   regardless of print-engine quirks, then restored on 'afterprint'
+   (with a timeout fallback).
+
+   v58 CHANGE FROM v57:
+   PDF download was printing BOTH POS and Opportunity content together,
+   regardless of which view was on screen. Root cause: print CSS forced
+   every .tab-panel to display, with no awareness of which report type
+   was active. Fix: _applyReportView() now stamps the current view onto
+   <body data-report-view="pos|opp">, and style.css print rules use that
+   attribute to hide the inactive report type's panels during print.
 
    v57 CHANGE FROM v56:
    Root cause of "Opportunity Report never appears, toggle button never shows"
@@ -734,6 +753,11 @@ function toggleReportView() {
 }
 
 function _applyReportView(view) {
+  // v58: mark current view on <body> so @media print rules can hide
+  // whichever report type ISN'T currently active — fixes PDF export
+  // pulling in both POS and Opportunity content together.
+  document.body.setAttribute('data-report-view', view);
+
   const filterBar = document.getElementById('siFilterBarMount');
   const toggleBtn = document.getElementById('view-toggle-btn');
 
@@ -1154,8 +1178,40 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen(saved ? 'screen-home' : 'screen-setup');
   });
   // PDF download
+  // v60: CSS-only filtering (@media print + data-report-view attribute)
+  // wasn't reliably honored by the device's print/PDF rendering pass —
+  // screen showed Opp correctly, but the exported file still contained
+  // POS content. Fix: force-hide the inactive report type's panels
+  // directly via inline style with 'important' priority right before
+  // print() fires. Inline !important always wins over stylesheet
+  // !important in the CSS cascade, so this is deterministic regardless
+  // of how the print engine re-evaluates conditional selectors.
   document.getElementById('btn-download-pdf')?.addEventListener('click', () => {
     showToast('Opening print dialog…');
+
+    const hideOpp = (_currentView !== 'opp'); // true when POS is the active view
+    const panelsToHide = hideOpp
+      ? document.querySelectorAll('.tab-panel[data-report="opp"]')
+      : document.querySelectorAll('.tab-panel:not([data-report])');
+
+    const restoreList = [];
+    panelsToHide.forEach(p => {
+      restoreList.push([p, p.style.getPropertyValue('display'), p.style.getPropertyPriority('display')]);
+      p.style.setProperty('display', 'none', 'important');
+    });
+
+    const restorePanels = () => {
+      restoreList.forEach(([p, val, priority]) => {
+        if (val) p.style.setProperty('display', val, priority);
+        else p.style.removeProperty('display');
+      });
+      window.removeEventListener('afterprint', restorePanels);
+    };
+    window.addEventListener('afterprint', restorePanels);
+    // Fallback in case 'afterprint' doesn't fire reliably in this
+    // browser's print/PDF flow (seen on some Android WebView contexts)
+    setTimeout(restorePanels, 4000);
+
     setTimeout(() => window.print(), 400);
   });
 

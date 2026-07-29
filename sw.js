@@ -1,18 +1,18 @@
 /**
  * StoreIntel Service Worker
- * Version: v59
+ * Version: v60
  * Date:    2026-07-28
- * Change:  CACHE_NAME bumped storeintel-v55 → storeintel-v59 (forces old
+ * Change:  CACHE_NAME bumped storeintel-v55 → storeintel-v60 (forces old
  *          cached files, including the broken app.js/renderer, to be
  *          discarded on next load).
  *          FILES_TO_CACHE corrected — it was still listing
  *          'renderer_opp_v1.0.js' and 'app_opp_v55.js', which do not match
  *          the files actually referenced in index.html
- *          ('renderer_opp_pwa_v1.2.js' and 'app_opp_v56.js'). This mismatch
+ *          ('renderer_opp_pwa_v1.3.js' and 'app_opp_v56.js'). This mismatch
  *          meant the service worker was never caching the right files for
  *          offline use — now fixed to match index.html exactly.
  */
-const CACHE_NAME = 'storeintel-v59';
+const CACHE_NAME = 'storeintel-v60';
 const FILES_TO_CACHE = [
   '/',
   '/index.html',
@@ -25,10 +25,10 @@ const FILES_TO_CACHE = [
   '/engine/analysis.js',
   '/engine/renderer.js',
   '/engine/date_filter.js',
-  // Opportunity Report engine (v59 — corrected filenames)
+  // Opportunity Report engine (v60 — corrected filenames)
   '/engine/ingestion_opp_v1.1.js',
   '/engine/analysis_opp_v1.1.js',
-  '/engine/renderer_opp_pwa_v1.2.js',
+  '/engine/renderer_opp_pwa_v1.3.js',
   '/engine/app_opp_v56.js',
   // Icons
   '/icons/icon-192.png',
@@ -38,7 +38,7 @@ const FILES_TO_CACHE = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log('[SW v59] Caching app shell and Opp engine files');
+      console.log('[SW v60] Caching app shell and Opp engine files');
       return cache.addAll(FILES_TO_CACHE);
     })
   );
@@ -53,7 +53,7 @@ self.addEventListener('activate', event => {
         cacheNames
           .filter(name => name !== CACHE_NAME)
           .map(name => {
-            console.log('[SW v59] Deleting old cache:', name);
+            console.log('[SW v60] Deleting old cache:', name);
             return caches.delete(name);
           })
       );
