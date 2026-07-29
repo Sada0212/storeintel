@@ -1,7 +1,17 @@
-/* StoreIntel PWA — app.js v60
+/* StoreIntel PWA — app.js v61
    Two-phase flow:
    SETUP (once): store name → upload mapping.xlsx → review → save
    MONTHLY:      pick POS excel + optional NP file → generate report
+
+   v61 CHANGE FROM v60:
+   The Mapping Review screen's Opportunity tab was hiding itself
+   entirely whenever the uploaded Opportunity mapping template parsed
+   to 0 fields — with no explanation shown anywhere. Now the tab
+   always appears once a file uploads and parses without error; a
+   0-field result shows an explanatory warning inside the tab instead
+   of vanishing silently. (Styling for .mapping-review-tabs / .mr-tab
+   — previously unstyled, causing a full-width "box spill" look — is
+   fixed in style.css.)
 
    v60 CHANGE FROM v58:
    PDF export was still including POS content when printing from the Opp
@@ -433,7 +443,12 @@ function _buildOppMappingReview() {
     tmpl = parseOppMappingTemplate(saved);
   } catch(e) { oppTabBtn.style.display = 'none'; return; }
 
-  if (!tmpl || tmpl.filledCount === 0) { oppTabBtn.style.display = 'none'; return; }
+  // v61: previously this hid the ENTIRE tab whenever 0 fields were
+  // detected, which silently swallowed the failure — no way to see
+  // WHY nothing mapped. Now the tab always shows once a file parses
+  // without error; a 0-field result surfaces as a visible warning
+  // inside the tab instead of disappearing.
+  if (!tmpl) { oppTabBtn.style.display = 'none'; return; }
 
   // Show the tab
   oppTabBtn.style.display = '';
@@ -477,7 +492,14 @@ function _buildOppMappingReview() {
     </div>`;
   });
 
-  oppRowsEl.innerHTML = rows.join('');
+  let rowsHtml = rows.join('');
+  if (tmpl.filledCount === 0) {
+    rowsHtml = `<div class="review-warning" style="margin-bottom:12px">
+      <span class="warning-icon">⚠️</span>
+      <span>No columns were detected in this mapping file. Check that the header row matches the Opportunity mapping template exactly — or skip this and the report will still auto-detect columns directly from your NP file when you generate it.</span>
+    </div>` + rowsHtml;
+  }
+  oppRowsEl.innerHTML = rowsHtml;
 }
 
 function initMappingReviewScreen() {

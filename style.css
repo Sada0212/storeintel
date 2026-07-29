@@ -1,4 +1,4 @@
-/* StoreIntel PWA — style.css v60
+/* StoreIntel PWA — style.css v61
    Brand: Navy #0f1b2d | Amber #c9973a
    Mobile-first. No framework. Works offline.
    v57: Added Opportunity Report layout styles at end of file —
@@ -16,7 +16,10 @@
    Up/When Stocked/All), matching the web view's filter buttons.
    v60: Added --blue/--green-light/--orange variables matching the
    web view's Opportunity report palette, so renderer_opp_pwa_v1.3.js
-   can give each KPI its own semantic color instead of flat teal. */
+   can give each KPI its own semantic color instead of flat teal.
+   v61: Added missing .mapping-review-tabs / .mr-tab styling — was
+   completely unstyled, rendering as a full-width "box spill" button
+   on the mapping review screen. */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1896,4 +1899,42 @@ body[data-report-view="opp"] .rpt-header {
   color: var(--grey);
   font-weight: 600;
   margin-bottom: 8px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MAPPING REVIEW TABS (v61)
+   .mapping-review-tabs / .mr-tab were used in index.html but never
+   styled — rendered as an unstyled, full-width native button ("box
+   spill"). Styled as a compact two-up segmented control, matching
+   the app's existing pill/segment language elsewhere.
+════════════════════════════════════════════════════════════ */
+.mapping-review-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.mr-tab {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--navy-light);
+  background: var(--navy-mid);
+  color: var(--grey);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mr-tab:active { transform: scale(0.98); }
+#mr-tab-pos.active {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--navy);
+}
+#mr-tab-opp.active {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
 }
