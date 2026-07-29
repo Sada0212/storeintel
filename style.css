@@ -1,6 +1,10 @@
-/* StoreIntel PWA — style.css v3
+/* StoreIntel PWA — style.css v57
    Brand: Navy #0f1b2d | Amber #c9973a
-   Mobile-first. No framework. Works offline. */
+   Mobile-first. No framework. Works offline.
+   v57: Added Opportunity Report layout styles at end of file —
+   renderer_opp_pwa_v1.1.js uses class names (.kpi, .sec-title,
+   .callout, .bar-row, .tbl-wrap, etc.) that previously had no CSS,
+   causing Opp tabs to render as unstyled plain text. */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1584,4 +1588,203 @@ html, body {
 
 .drawer-actions {
   padding: 8px 16px 32px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   OPPORTUNITY REPORT — layout styles (v57)
+   renderer_opp_pwa_v1.1.js builds its HTML using these class names.
+   They didn't exist before, so Opp content rendered as unstyled
+   plain text. This block styles it to match the app's dark
+   navy/amber theme, using teal as the Opportunity accent color
+   so it reads as visually distinct from the Sales report.
+════════════════════════════════════════════════════════════ */
+
+:root {
+  --teal:      #1A7A7A;
+  --teal-dim:  rgba(26,122,122,0.18);
+  --teal-bg:   rgba(26,122,122,0.10);
+  --gold-bg:   #2a220f;
+  --muted:     var(--grey);
+}
+
+/* Page wrapper inside each Opp tab-scroll */
+.page {
+  padding-bottom: 8px;
+}
+
+/* Section card — same shape language as .ts used in POS report */
+.section {
+  background: var(--navy-mid);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+/* Section title with numbered badge, e.g. "O1  Summary" */
+.sec-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--navy-light);
+}
+.sec-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+
+/* ── KPI cards ────────────────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.kpi {
+  background: var(--navy-light);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.kpi-val {
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.kpi-lbl {
+  font-size: 11px;
+  color: var(--grey);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 3px;
+}
+
+/* ── Callout boxes ────────────────────────────────────────── */
+.callout {
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--white);
+  margin-bottom: 10px;
+  border-left: 3px solid var(--teal);
+  background: var(--teal-bg);
+}
+.callout.warn {
+  border-left-color: var(--amber);
+  background: rgba(201,151,58,0.10);
+}
+.callout.danger {
+  border-left-color: var(--red);
+  background: var(--red-bg);
+}
+.callout.success {
+  border-left-color: var(--green);
+  background: var(--green-bg);
+}
+.callout.info {
+  border-left-color: var(--grey);
+  background: rgba(138,154,176,0.08);
+  font-size: 12px;
+  color: var(--grey);
+}
+
+/* ── Bars (O2 — Why They Left, etc.) ─────────────────────── */
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+.bar-lbl {
+  flex: 0 0 150px;
+  font-size: 12px;
+  color: var(--white);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--navy-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* ── Tables (contact list, category matrix, stock gaps, etc.) ── */
+.tbl-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--navy-light);
+}
+.tbl-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.tbl-wrap th {
+  background: var(--navy-light);
+  color: var(--grey);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  text-align: left;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+.tbl-wrap td {
+  padding: 8px 10px;
+  color: var(--white);
+  border-top: 1px solid var(--navy-light);
+  white-space: nowrap;
+}
+.tbl-wrap th.r,
+.tbl-wrap td.r {
+  text-align: right;
+}
+.tbl-wrap tr:nth-child(even) td {
+  background: rgba(255,255,255,0.015);
+}
+
+/* Opportunity Contact List — expandable message row */
+.opp-card-row:active {
+  background: var(--navy-light);
+}
+
+/* ── Responsive: 2-column KPI grid on wider phones ──────────── */
+@media (min-width: 360px) {
+  .kpi-grid[style*="repeat(2,1fr)"] {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* On narrow phones, force single column so KPI values never truncate */
+@media (max-width: 340px) {
+  .kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .bar-lbl {
+    flex-basis: 110px;
+  }
 }
